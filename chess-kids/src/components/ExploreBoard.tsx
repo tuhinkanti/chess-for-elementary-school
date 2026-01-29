@@ -69,6 +69,8 @@ export function ExploreBoard({
           const square = `${file}${rank}`;
           const isLight = isLightSquare(file, rank);
           const styles = getSquareStyle(square, isLight);
+          const isFirstFile = file === 'a';
+          const isLastRank = rank === 1;
 
           return (
             <motion.button
@@ -82,16 +84,49 @@ export function ExploreBoard({
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                fontSize: squareSize * 0.3,
-                color: isLight ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.2)',
+                position: 'relative', // Added for absolute positioning of labels
                 ...styles,
               }}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={() => onSquareTap(square)}
             >
+              {/* Rank labels (numbers 1-8) on the first file (a) */}
+              {isFirstFile && (
+                <span
+                  style={{
+                    position: 'absolute',
+                    top: 2,
+                    left: 2,
+                    fontSize: squareSize * 0.15,
+                    fontWeight: 'bold',
+                    color: isLight ? 'rgba(0,0,0,0.3)' : 'rgba(255,255,255,0.3)',
+                    pointerEvents: 'none',
+                  }}
+                >
+                  {rank}
+                </span>
+              )}
+
+              {/* File labels (letters a-h) on the last rank (1) */}
+              {isLastRank && (
+                <span
+                  style={{
+                    position: 'absolute',
+                    bottom: 2,
+                    right: 2,
+                    fontSize: squareSize * 0.15,
+                    fontWeight: 'bold',
+                    color: isLight ? 'rgba(0,0,0,0.3)' : 'rgba(255,255,255,0.3)',
+                    pointerEvents: 'none',
+                  }}
+                >
+                  {file}
+                </span>
+              )}
+
               {CORNER_SQUARES.includes(square) && highlightCorners && (
-                <span style={{ fontSize: squareSize * 0.5 }}>
+                <span style={{ fontSize: squareSize * 0.5, zIndex: 1 }}>
                   {tappedCorners.has(square) ? '✓' : '★'}
                 </span>
               )}
