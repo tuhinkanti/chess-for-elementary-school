@@ -4,7 +4,7 @@ import { Chess, type Square } from 'chess.js';
 
 interface ChessBoardProps {
   fen?: string;
-  onMove?: (from: string, to: string, isCapture: boolean) => boolean;
+  onMove?: (from: string, to: string, piece: string, isCapture: boolean) => boolean;
   highlightSquares?: string[];
   interactive?: boolean;
   boardSize?: number;
@@ -63,14 +63,16 @@ export function ChessBoard({
 
   const handleMove = (from: string, to: string) => {
     try {
+      const piece = game.get(from as Square)?.type || '';
       const targetPiece = game.get(to as Square);
       const isCapture = targetPiece !== null;
-      
+
       const move = game.move({ from, to, promotion: 'q' });
       if (move) {
-        setGame(new Chess(game.fen()));
+        const whiteTurnFen = game.fen().replace(/ [bw] /, ' w ');
+        setGame(new Chess(whiteTurnFen));
         if (onMove) {
-          return onMove(from, to, isCapture);
+          return onMove(from, to, piece, isCapture);
         }
         return true;
       }

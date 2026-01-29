@@ -47,60 +47,51 @@ export function LessonPage() {
 
   const currentObjective = config?.objectives[lessonState.currentObjectiveIndex];
 
-  const checkAndAdvance = useCallback((newState: LessonState) => {
-    if (!config || !currentObjective) return newState;
+  // Check for objective completion whenever lessonState changes
+  useEffect(() => {
+    if (!config || !currentObjective || showCelebration) return;
 
-    const isComplete = checkObjectiveComplete(currentObjective, newState);
+    const isComplete = checkObjectiveComplete(currentObjective, lessonState);
 
     if (isComplete) {
-      const newCompleted = [...newState.completedObjectives, currentObjective.id];
-      const nextIndex = newState.currentObjectiveIndex + 1;
+      const nextIndex = lessonState.currentObjectiveIndex + 1;
+      const newCompleted = [...lessonState.completedObjectives, currentObjective.id];
 
       if (nextIndex >= config.objectives.length) {
+        // All objectives done!
         setShowCelebration(true);
         addStars(3);
         completeLesson(lessonId);
-        return {
-          ...newState,
+
+        setLessonState(prev => ({
+          ...prev,
           completedObjectives: newCompleted,
           currentObjectiveIndex: nextIndex,
-        };
+        }));
       } else {
-        return {
-          ...resetObjectiveState(newState),
+        // Advance to next objective
+        setLessonState(prev => ({
+          ...resetObjectiveState(prev),
           completedObjectives: newCompleted,
           currentObjectiveIndex: nextIndex,
-        };
+        }));
       }
     }
-
-    return newState;
-  }, [config, currentObjective, lessonId, addStars, completeLesson]);
+  }, [lessonState, config, currentObjective, lessonId, addStars, completeLesson, showCelebration]);
 
   const onSquareTap = useCallback((square: string) => {
-    setLessonState((prev) => {
-      const newState = handleSquareTap(square, prev);
-      return checkAndAdvance(newState);
-    });
-  }, [checkAndAdvance]);
+    setLessonState((prev) => handleSquareTap(square, prev));
+  }, []);
 
-  const onChessMove = useCallback((isCapture: boolean) => {
-    setLessonState((prev) => {
-      const newState = handleMove(prev, isCapture);
-      return checkAndAdvance(newState);
-    });
+  const onChessMove = useCallback((from: string, to: string, piece: string, isCapture: boolean) => {
+    setLessonState((prev) => handleMove(prev, { from, to, piece, isCapture }));
     return true;
-  }, [checkAndAdvance]);
+  }, []);
 
   const onAnswerSelect = useCallback((isCorrect: boolean) => {
-    if (!isCorrect) {
-      return;
-    }
-    setLessonState((prev) => {
-      const newState = handleAnswer(prev, isCorrect);
-      return checkAndAdvance(newState);
-    });
-  }, [checkAndAdvance]);
+    if (!isCorrect) return;
+    setLessonState((prev) => handleAnswer(prev, isCorrect));
+  }, []);
 
   const handleCelebrationComplete = () => {
     setShowCelebration(false);
@@ -166,8 +157,9 @@ export function LessonPage() {
               />
             ) : (
               <ChessBoard
+                key={`${lessonId}-${lessonState.currentObjectiveIndex}`}
                 fen={config.fen || undefined}
-                onMove={(_from, _to, isCapture) => onChessMove(isCapture)}
+                onMove={(from, to, piece, isCapture) => onChessMove(from, to, piece, isCapture)}
                 boardSize={Math.min(400, window.innerWidth - 40)}
               />
             )}
@@ -179,7 +171,7 @@ export function LessonPage() {
               {config.objectives.map((objective, index) => {
                 const isCompleted = lessonState.completedObjectives.includes(objective.id);
                 const isCurrent = index === lessonState.currentObjectiveIndex;
-                
+
                 return (
                   <motion.li
                     key={objective.id}

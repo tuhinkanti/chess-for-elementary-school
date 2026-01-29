@@ -1,4 +1,4 @@
-export type LessonType = 
+export type LessonType =
   | 'explore-board'
   | 'piece-movement'
   | 'capture'
@@ -16,6 +16,7 @@ export interface ObjectiveValidator {
   requiredSquares?: string[];
   requiredCount?: number;
   pieceType?: string;
+  requiredDistance?: number;
   correctAnswer?: number;
 }
 
@@ -29,7 +30,7 @@ export interface LessonConfig {
 
 export const CORNER_SQUARES = ['a1', 'a8', 'h1', 'h8'];
 export const ALL_SQUARES = Array.from({ length: 8 }, (_, r) =>
-  Array.from({ length: 8 }, (_, c) => 
+  Array.from({ length: 8 }, (_, c) =>
     `${String.fromCharCode(97 + c)}${r + 1}`
   )
 ).flat();
@@ -43,17 +44,17 @@ export const lessonConfigs: Record<number, LessonConfig> = {
     objectives: [
       {
         id: 'tap-squares',
-        description: 'Tap on 5 different squares',
+        description: 'Tap 5 squares where pieces could live',
         validator: { type: 'tap-squares', requiredCount: 5 },
       },
       {
         id: 'find-corners',
-        description: 'Tap all 4 corners of the board',
+        description: 'Find the 4 corner homes (Rooks live here!)',
         validator: { type: 'tap-corners', requiredSquares: CORNER_SQUARES },
       },
       {
         id: 'count-row',
-        description: 'How many squares in one row?',
+        description: 'Count how many squares are in the bottom row',
         validator: { type: 'count-confirm', correctAnswer: 8 },
       },
     ],
@@ -65,18 +66,18 @@ export const lessonConfigs: Record<number, LessonConfig> = {
     objectives: [
       {
         id: 'move-pawn-1',
-        description: 'Move any pawn forward',
-        validator: { type: 'move-piece', pieceType: 'p' },
+        description: 'Move a pawn forward 1 square',
+        validator: { type: 'move-piece', pieceType: 'p', requiredDistance: 1 },
       },
       {
         id: 'move-pawn-2',
-        description: 'Move another piece',
-        validator: { type: 'move-piece', pieceType: 'p' },
+        description: 'Try a "Big Step"! Move a pawn forward 2 squares',
+        validator: { type: 'move-piece', pieceType: 'p', requiredDistance: 2 },
       },
       {
         id: 'move-pawn-3',
-        description: 'Great! Make one more move',
-        validator: { type: 'move-piece', pieceType: 'p' },
+        description: 'Great! Move any piece to complete the lesson',
+        validator: { type: 'any-moves', requiredCount: 1 },
       },
     ],
   },
@@ -238,6 +239,11 @@ export interface LessonState {
   tappedCorners: Set<string>;
   moveCount: number;
   captureCount: number;
+  lastMove?: {
+    piece: string;
+    distance: number;
+    isCapture: boolean;
+  };
   currentObjectiveIndex: number;
   completedObjectives: string[];
   answeredCorrectly: boolean;
@@ -266,7 +272,7 @@ export function checkObjectiveComplete(
       return state.tappedSquares.size >= (validator.requiredCount || 5);
 
     case 'tap-corners':
-      return (validator.requiredSquares || CORNER_SQUARES).every(sq =>
+      return (validator.requiredSquares || CORNER_SQUARES).every((sq: string) =>
         state.tappedCorners.has(sq)
       );
 
@@ -274,7 +280,10 @@ export function checkObjectiveComplete(
       return state.answeredCorrectly;
 
     case 'move-piece':
-      return state.moveCount >= 1;
+      if (!state.lastMove) return false;
+      const pieceMatch = !validator.pieceType || state.lastMove.piece.toLowerCase() === validator.pieceType.toLowerCase();
+      const distanceMatch = !validator.requiredDistance || state.lastMove.distance === validator.requiredDistance;
+      return pieceMatch && distanceMatch;
 
     case 'capture':
       return state.captureCount >= 1;
@@ -303,11 +312,23 @@ export function handleSquareTap(square: string, state: LessonState): LessonState
   };
 }
 
-export function handleMove(state: LessonState, isCapture: boolean): LessonState {
+export function handleMove(
+  state: LessonState,
+  moveInfo: { piece: string; from: string; to: string; isCapture: boolean }
+): LessonState {
+  const fromRank = parseInt(moveInfo.from[1]);
+  const toRank = parseInt(moveInfo.to[1]);
+  const distance = Math.abs(toRank - fromRank);
+
   return {
     ...state,
     moveCount: state.moveCount + 1,
-    captureCount: state.captureCount + (isCapture ? 1 : 0),
+    captureCount: state.captureCount + (moveInfo.isCapture ? 1 : 0),
+    lastMove: {
+      piece: moveInfo.piece,
+      distance,
+      isCapture: moveInfo.isCapture
+    }
   };
 }
 
@@ -326,5 +347,6 @@ export function resetObjectiveState(state: LessonState): LessonState {
     moveCount: 0,
     captureCount: 0,
     answeredCorrectly: false,
+    lastMove: undefined,
   };
 }
