@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useMemo, type ReactNode } from 'react';
 import { type Profile, type ProfileProgress, generateId } from '../data/profiles';
 
 interface ProfilesData {
@@ -45,7 +45,10 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('chess-kids-profiles', JSON.stringify(data));
   }, [data]);
 
-  const currentProfile = data.profiles.find(p => p.id === data.currentProfileId) || null;
+  const currentProfile = useMemo(() => {
+    return data.profiles.find(p => p.id === data.currentProfileId) || null;
+  }, [data.profiles, data.currentProfileId]);
+
   const currentProgress = data.currentProfileId 
     ? (data.progress[data.currentProfileId] || defaultProgress)
     : defaultProgress;
