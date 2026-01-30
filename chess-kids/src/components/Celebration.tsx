@@ -32,7 +32,15 @@ function generateConfettiParticles(): ConfettiParticle[] {
 }
 
 export function Celebration({ show, starsEarned, message, onComplete }: CelebrationProps) {
-  const [confettiParticles] = useState(generateConfettiParticles);
+  const [confettiParticles, setConfettiParticles] = useState(generateConfettiParticles);
+  const [prevShow, setPrevShow] = useState(show);
+
+  if (show !== prevShow) {
+    setPrevShow(show);
+    if (show) {
+      setConfettiParticles(generateConfettiParticles());
+    }
+  }
 
   return (
     <AnimatePresence>
