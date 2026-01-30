@@ -27,27 +27,33 @@ export function ExploreBoard({
   };
 
   const getSquareStyle = (square: string, isLight: boolean) => {
-    const baseColor = isLight ? '#edeed1' : '#779952';
     const isTapped = tappedSquares.has(square);
     const isCorner = CORNER_SQUARES.includes(square);
     const cornerTapped = tappedCorners.has(square);
 
-    let background = baseColor;
-    let boxShadow = 'none';
+    const baseColor = isLight ? '#f0f1d8' : '#88a65e';
+    const tappedColor = isLight ? '#fff59d' : '#cbd86a';
 
-    if (isTapped) {
-      background = isLight ? '#f7f769' : '#bbcb44';
-    }
+    let background = isTapped ? tappedColor : baseColor;
+    let boxShadow = 'none';
+    let borderColor = 'transparent';
 
     if (highlightCorners && isCorner) {
       if (cornerTapped) {
-        boxShadow = 'inset 0 0 0 4px rgba(107, 203, 119, 0.9)';
+        boxShadow = 'inset 0 0 15px rgba(107, 203, 119, 0.8)';
+        borderColor = 'var(--success)';
       } else {
-        boxShadow = 'inset 0 0 0 4px rgba(255, 200, 0, 0.8)';
+        boxShadow = 'inset 0 0 15px rgba(255, 200, 0, 0.8), 0 0 10px rgba(255, 200, 0, 0.4)';
+        borderColor = 'var(--secondary)';
       }
     }
 
-    return { background, boxShadow };
+    return {
+      background,
+      boxShadow,
+      border: highlightCorners && isCorner ? `3px solid ${borderColor}` : 'none',
+      zIndex: highlightCorners && isCorner ? 2 : 1
+    };
   };
 
   return (
@@ -79,7 +85,6 @@ export function ExploreBoard({
               style={{
                 width: squareSize,
                 height: squareSize,
-                border: 'none',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
