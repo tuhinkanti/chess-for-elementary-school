@@ -12,14 +12,14 @@ export interface Lesson {
 export const lessons: Lesson[] = [
   {
     id: 1,
-    title: "Meet the Board",
+    title: "The Chess Kingdom",
     icon: "🏰",
-    description: "Learn about the magical chess kingdom",
-    storyIntro: "Welcome to the Chess Kingdom! This is a special board where pieces have adventures. It has 64 squares - some light, some dark, like a checkerboard!",
+    description: "Meet the board and the pieces' homes",
+    storyIntro: "Welcome to the Chess Kingdom! Every piece has its own special home on this magical grid. See the numbers and letters? They help the Rook, Knight, and Bishop find their way back home! Let's explore the board where all the pieces live.",
     objectives: [
-      "Tap on different squares",
-      "Find the corners of the board",
-      "Count the squares in one row"
+      "Tap 5 squares where pieces could live",
+      "Find the 4 corner homes (Rooks live here!)",
+      "Count the squares in the bottom row"
     ],
     unlockStars: 0
   },
@@ -31,9 +31,9 @@ export const lessons: Lesson[] = [
     description: "Learn how the little pawn moves",
     storyIntro: "Pawns are brave little soldiers! They always march forward, one step at a time. On their first move, they can take TWO big steps!",
     objectives: [
-      "Move a pawn forward one square",
-      "Move a pawn two squares on first move",
-      "Capture an enemy piece diagonally"
+      "Move a pawn forward 1 square",
+      "Try a 'Big Step'! Move a pawn 2 squares",
+      "Great! Make any move to finish"
     ],
     unlockStars: 3
   },

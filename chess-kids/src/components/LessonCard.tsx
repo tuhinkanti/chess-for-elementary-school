@@ -13,12 +13,24 @@ export function LessonCard({ lesson, onClick }: LessonCardProps) {
   const isUnlocked = currentProgress.stars >= lesson.unlockStars;
   const isCompleted = currentProgress.completedLessons.includes(lesson.id);
 
+  // Construct a descriptive label for screen readers
+  const label = `${lesson.title}. ${
+    !isUnlocked
+      ? `Locked. Needs ${lesson.unlockStars} stars.`
+      : isCompleted
+        ? 'Completed. Tap to play again.'
+        : 'Tap to start.'
+  }`;
+
   return (
-    <motion.div
+    <motion.button
+      type="button"
       whileHover={isUnlocked ? { scale: 1.05 } : {}}
       whileTap={isUnlocked ? { scale: 0.95 } : {}}
       className={`lesson-card ${isUnlocked ? 'unlocked' : 'locked'} ${isCompleted ? 'completed' : ''}`}
       onClick={isUnlocked ? onClick : undefined}
+      aria-label={label}
+      aria-disabled={!isUnlocked}
     >
       <div className="lesson-icon">
         {isUnlocked ? (
@@ -44,6 +56,6 @@ export function LessonCard({ lesson, onClick }: LessonCardProps) {
           </div>
         )}
       </div>
-    </motion.div>
+    </motion.button>
   );
 }
