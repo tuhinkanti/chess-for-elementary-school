@@ -438,6 +438,20 @@ body {
   font-size: 0.9rem;
 }
 
+.profile-content-btn {
+  background: transparent;
+  border: none;
+  padding: 0;
+  width: 100%;
+  text-align: inherit;
+  font: inherit;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: inherit;
+}
+
 .delete-profile-btn {
   position: absolute;
   top: 0.5rem;
@@ -458,6 +472,10 @@ body {
 
 .delete-profile-btn:hover {
   background: rgba(255, 100, 100, 0.4);
+}
+
+.delete-profile-btn:focus-visible {
+  opacity: 1;
 }
 
 /* Create Profile Form */
