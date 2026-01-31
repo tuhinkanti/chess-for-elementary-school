@@ -20,11 +20,14 @@ export function ChessBoard({
   boardSize = 400,
 }: ChessBoardProps) {
   const [game, setGame] = useState(() => new Chess(fen));
-  const [selectedSquare, setSelectedSquare] = useState<string | null>(null);
+  const [prevFen, setPrevFen] = useState(fen);
 
-  useEffect(() => {
+  if (fen !== prevFen) {
+    setPrevFen(fen);
     setGame(new Chess(fen));
-  }, [fen]);
+  }
+
+  const [selectedSquare, setSelectedSquare] = useState<string | null>(null);
 
   const getMoveOptions = (square: Square) => {
     const moves = game.moves({ square, verbose: true });

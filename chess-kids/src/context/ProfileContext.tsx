@@ -1,32 +1,10 @@
 import { createContext, useContext, useState, useEffect, useMemo, type ReactNode } from 'react';
 import { type Profile, type ProfileProgress, generateId } from '../data/profiles';
-
-interface ProfilesData {
-  profiles: Profile[];
-  currentProfileId: string | null;
-  progress: Record<string, ProfileProgress>;
-}
-
-interface ProfileContextType {
-  profiles: Profile[];
-  currentProfile: Profile | null;
-  currentProgress: ProfileProgress;
-  createProfile: (name: string, avatar: string) => Profile;
-  selectProfile: (profileId: string) => void;
-  deleteProfile: (profileId: string) => void;
-  updateProgress: (progress: Partial<ProfileProgress>) => void;
-  addStars: (count: number) => void;
-  completeLesson: (lessonId: number) => void;
-  resetProgress: () => void;
-}
-
-const defaultProgress: ProfileProgress = {
-  stars: 0,
-  completedLessons: [],
-  currentLesson: 1,
-};
-
-const ProfileContext = createContext<ProfileContextType | undefined>(undefined);
+import {
+  ProfileContext,
+  type ProfilesData,
+  defaultProgress,
+} from './ProfileContextDefinition';
 
 export function ProfileProvider({ children }: { children: ReactNode }) {
   const [data, setData] = useState<ProfilesData>(() => {
@@ -145,10 +123,3 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
   );
 }
 
-export function useProfile() {
-  const context = useContext(ProfileContext);
-  if (!context) {
-    throw new Error('useProfile must be used within a ProfileProvider');
-  }
-  return context;
-}
