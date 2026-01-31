@@ -21,6 +21,16 @@ export function ChessBoard({
 }: ChessBoardProps) {
   const [game, setGame] = useState(() => new Chess(fen));
   const [selectedSquare, setSelectedSquare] = useState<string | null>(null);
+  const [moveSquares, setMoveSquares] = useState<Record<string, React.CSSProperties>>({});
+
+  // Derived state to handle fen prop changes
+  const [prevFen, setPrevFen] = useState(fen);
+  if (fen !== prevFen) {
+    setPrevFen(fen);
+    setGame(new Chess(fen));
+    setSelectedSquare(null);
+    setMoveSquares({});
+  }
 
   const getMoveOptions = (square: Square) => {
     const moves = game.moves({ square, verbose: true });
@@ -37,8 +47,6 @@ export function ChessBoard({
 
     return highlights;
   };
-
-  const [moveSquares, setMoveSquares] = useState<Record<string, React.CSSProperties>>({});
 
   const handleSquareClick = ({ square }: SquareHandlerArgs) => {
     if (!interactive) return;
