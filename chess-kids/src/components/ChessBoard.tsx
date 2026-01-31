@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { Chessboard, type SquareHandlerArgs, type PieceDropHandlerArgs } from 'react-chessboard';
 import { Chess, type Square } from 'chess.js';
 
@@ -21,10 +21,6 @@ export function ChessBoard({
 }: ChessBoardProps) {
   const [game, setGame] = useState(() => new Chess(fen));
   const [selectedSquare, setSelectedSquare] = useState<string | null>(null);
-
-  useEffect(() => {
-    setGame(new Chess(fen));
-  }, [fen]);
 
   const getMoveOptions = (square: Square) => {
     const moves = game.moves({ square, verbose: true });

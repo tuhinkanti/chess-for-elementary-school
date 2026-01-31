@@ -17,13 +17,13 @@ describe('ChessBoard Performance', () => {
     // the styles should be stable across renders if internal state doesn't change.
     const { rerender } = render(<ChessBoard />);
 
-    const initialCall = mockChessboard.mock.lastCall[0];
+    const initialCall = mockChessboard.mock.lastCall![0];
     const initialStyles = initialCall.options.squareStyles;
 
     // Rerender with same props
     rerender(<ChessBoard />);
 
-    const secondCall = mockChessboard.mock.lastCall[0];
+    const secondCall = mockChessboard.mock.lastCall![0];
     const secondStyles = secondCall.options.squareStyles;
 
     // OPTIMIZED: They should be the same reference now
@@ -33,13 +33,13 @@ describe('ChessBoard Performance', () => {
   it('updates customSquareStyles when highlightSquares prop changes', () => {
     const { rerender } = render(<ChessBoard highlightSquares={['e4']} />);
 
-    const initialCall = mockChessboard.mock.lastCall[0];
+    const initialCall = mockChessboard.mock.lastCall![0];
     const initialStyles = initialCall.options.squareStyles;
 
     // Rerender with different highlightSquares
     rerender(<ChessBoard highlightSquares={['d4']} />);
 
-    const secondCall = mockChessboard.mock.lastCall[0];
+    const secondCall = mockChessboard.mock.lastCall![0];
     const secondStyles = secondCall.options.squareStyles;
 
     // Functionality: They should be different

@@ -1,3 +1,5 @@
+/* eslint-disable react-hooks/purity */
+import { useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Star } from 'lucide-react';
 
@@ -9,6 +11,16 @@ interface CelebrationProps {
 }
 
 export function Celebration({ show, starsEarned, message, onComplete }: CelebrationProps) {
+  const confettiParticles = useMemo(() => [...Array(20)].map((_, i) => ({
+    id: i,
+    left: `${Math.random() * 100}%`,
+    backgroundColor: ['#ff6b6b', '#4ecdc4', '#ffe66d', '#95e1d3', '#f38181'][i % 5],
+    x: (Math.random() - 0.5) * 200,
+    rotate: Math.random() * 720,
+    duration: 2 + Math.random(),
+    delay: Math.random() * 0.5
+  })), []);
+
   return (
     <AnimatePresence>
       {show && (
@@ -61,23 +73,23 @@ export function Celebration({ show, starsEarned, message, onComplete }: Celebrat
           </motion.div>
 
           {/* Confetti particles */}
-          {[...Array(20)].map((_, i) => (
+          {confettiParticles.map((particle) => (
             <motion.div
-              key={i}
+              key={particle.id}
               className="confetti"
               style={{
-                left: `${Math.random() * 100}%`,
-                backgroundColor: ['#ff6b6b', '#4ecdc4', '#ffe66d', '#95e1d3', '#f38181'][i % 5],
+                left: particle.left,
+                backgroundColor: particle.backgroundColor,
               }}
               initial={{ y: -20, opacity: 1 }}
               animate={{
                 y: '100vh',
-                x: (Math.random() - 0.5) * 200,
-                rotate: Math.random() * 720,
+                x: particle.x,
+                rotate: particle.rotate,
               }}
               transition={{
-                duration: 2 + Math.random(),
-                delay: Math.random() * 0.5,
+                duration: particle.duration,
+                delay: particle.delay,
                 ease: 'easeOut',
               }}
             />
