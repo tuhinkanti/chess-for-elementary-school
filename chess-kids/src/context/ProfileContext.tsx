@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useState, useEffect, useMemo, type ReactNode } from 'react';
 import { type Profile, type ProfileProgress, generateId } from '../data/profiles';
 

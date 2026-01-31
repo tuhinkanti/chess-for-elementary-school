@@ -39,11 +39,13 @@ export function LessonPage() {
     }
   }, [currentProfile, navigate]);
 
-  useEffect(() => {
+  const [prevLessonId, setPrevLessonId] = useState(lessonId);
+  if (lessonId !== prevLessonId) {
+    setPrevLessonId(lessonId);
     setLessonState(createInitialLessonState());
     setShowStory(true);
     setShowCelebration(false);
-  }, [lessonId]);
+  }
 
   const currentObjective = config?.objectives[lessonState.currentObjectiveIndex];
 
@@ -59,6 +61,7 @@ export function LessonPage() {
 
       if (nextIndex >= config.objectives.length) {
         // All objectives done!
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setShowCelebration(true);
         addStars(3);
         completeLesson(lessonId);

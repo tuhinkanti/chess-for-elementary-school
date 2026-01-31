@@ -279,11 +279,12 @@ export function checkObjectiveComplete(
     case 'count-confirm':
       return state.answeredCorrectly;
 
-    case 'move-piece':
+    case 'move-piece': {
       if (!state.lastMove) return false;
       const pieceMatch = !validator.pieceType || state.lastMove.piece.toLowerCase() === validator.pieceType.toLowerCase();
       const distanceMatch = !validator.requiredDistance || state.lastMove.distance === validator.requiredDistance;
       return pieceMatch && distanceMatch;
+    }
 
     case 'capture':
       return state.captureCount >= 1;
