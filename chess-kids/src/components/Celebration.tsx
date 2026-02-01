@@ -17,17 +17,23 @@ interface ConfettiParticle {
   rotate: number;
   duration: number;
   delay: number;
+  width: number;
+  height: number;
+  borderRadius: string;
 }
 
 function generateConfettiParticles(): ConfettiParticle[] {
-  return [...Array(20)].map((_, i) => ({
+  return [...Array(50)].map((_, i) => ({
     id: i,
     left: Math.random() * 100,
-    color: ['#ff6b6b', '#4ecdc4', '#ffe66d', '#95e1d3', '#f38181'][i % 5],
-    x: (Math.random() - 0.5) * 200,
-    rotate: Math.random() * 720,
-    duration: 2 + Math.random(),
-    delay: Math.random() * 0.5,
+    color: ['#ff6b6b', '#4ecdc4', '#ffe66d', '#95e1d3', '#f38181', '#a29bfe', '#fab1a0'][i % 7],
+    x: (Math.random() - 0.5) * 400,
+    rotate: Math.random() * 1080,
+    duration: 3 + Math.random() * 2,
+    delay: Math.random() * 1,
+    width: Math.random() * 12 + 6,
+    height: Math.random() * 12 + 6,
+    borderRadius: i % 2 === 0 ? '50%' : '2px',
   }));
 }
 
@@ -63,16 +69,24 @@ export function Celebration({ show, starsEarned, message, onComplete }: Celebrat
               className="celebration-stars"
               initial={{ y: -50, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.3 }}
+              transition={{ delay: 0.3, type: 'spring', stiffness: 100 }}
             >
               {[...Array(starsEarned)].map((_, i) => (
                 <motion.div
                   key={i}
-                  initial={{ scale: 0, rotate: -180 }}
-                  animate={{ scale: 1, rotate: 0 }}
-                  transition={{ delay: 0.5 + i * 0.2, type: 'spring' }}
+                  initial={{ scale: 0, rotate: -20, y: 20 }}
+                  animate={{ scale: 1, rotate: 0, y: 0 }}
+                  transition={{
+                    delay: 0.5 + i * 0.2,
+                    type: 'spring',
+                    stiffness: 200,
+                    damping: 10
+                  }}
+                  style={{
+                    filter: 'drop-shadow(0 0 10px rgba(255, 215, 0, 0.5))'
+                  }}
                 >
-                  <Star size={48} fill="gold" color="gold" />
+                  <Star size={64} fill="#FFD700" color="#FFD700" />
                 </motion.div>
               ))}
             </motion.div>
@@ -101,17 +115,20 @@ export function Celebration({ show, starsEarned, message, onComplete }: Celebrat
               style={{
                 left: `${particle.left}%`,
                 backgroundColor: particle.color,
+                width: particle.width,
+                height: particle.height,
+                borderRadius: particle.borderRadius,
               }}
-              initial={{ y: -20, opacity: 1 }}
+              initial={{ y: -50, opacity: 1, rotate: 0 }}
               animate={{
-                y: '100vh',
+                y: '110vh',
                 x: particle.x,
                 rotate: particle.rotate,
               }}
               transition={{
                 duration: particle.duration,
                 delay: particle.delay,
-                ease: 'easeOut',
+                ease: [0.23, 1, 0.32, 1],
               }}
             />
           ))}

@@ -44,15 +44,15 @@ export function LessonCard({ lesson, onClick }: LessonCardProps) {
         <p>{lesson.description}</p>
         {!isUnlocked && (
           <div className="unlock-requirement">
-            <Star size={14} fill="gold" color="gold" />
+            <Star size={14} fill="#FFD700" color="#FFD700" />
             <span>{lesson.unlockStars} stars to unlock</span>
           </div>
         )}
         {isCompleted && (
           <div className="completed-badge">
-            <Star size={14} fill="gold" color="gold" />
-            <Star size={14} fill="gold" color="gold" />
-            <Star size={14} fill="gold" color="gold" />
+            <Star size={14} fill="#FFD700" color="#FFD700" />
+            <Star size={14} fill="#FFD700" color="#FFD700" />
+            <Star size={14} fill="#FFD700" color="#FFD700" />
           </div>
         )}
       </div>
