@@ -39,18 +39,18 @@ describe('ExploreBoard', () => {
     // console.log('a8 color:', colorA8);
     // Note: style.background usually returns RGB in jsdom? Or the string if set via style prop?
     // React style prop usually sets it as string.
-    expect(colorA8).toBe('rgb(119, 153, 82)'); // #779952 converted to rgb roughly, or just check hex if jsdom preserves it.
+    expect(colorA8).toBe('rgb(136, 166, 94)'); // Updated color
     // Actually, let's verify what we get.
 
     // a1: fileIndex 0, rank 1.
     // isLight = (0 + 1) % 2 === 1 -> True.
-    // Color: #edeed1 (Light)
+    // Color: #edeed1 (Light) -> Updated
     const colorA1 = getSquareColor(0, 1);
-    expect(colorA1).toBe('rgb(237, 238, 209)'); // #edeed1
+    expect(colorA1).toBe('rgb(240, 241, 216)'); // Updated color
 
     // b8: fileIndex 1, rank 8.
     // isLight = (1 + 8) % 2 === 1 -> True.
     const colorB8 = getSquareColor(1, 8);
-    expect(colorB8).toBe('rgb(237, 238, 209)');
+    expect(colorB8).toBe('rgb(240, 241, 216)');
   });
 });

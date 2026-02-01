@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Plus, Trash2, Star } from 'lucide-react';
-import { useProfile } from '../context/ProfileContext';
+import { useProfile } from '../hooks/useProfile';
 import { avatarOptions } from '../data/profiles';
 
 export function ProfileSelect() {
@@ -61,34 +61,26 @@ export function ProfileSelect() {
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: 0.1 * index }}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => handleSelectProfile(profile.id)}
               >
-                <motion.button
-                  className="profile-content-btn"
-                  onClick={() => handleSelectProfile(profile.id)}
-                  aria-label={`Select profile ${profile.name}`}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  <div className="profile-avatar">{profile.avatar}</div>
-                  <div className="profile-name">{profile.name}</div>
-                  <div className="profile-stars">
-                    <Star size={14} fill="gold" color="gold" />
-                    <span>0</span>
-                  </div>
-                </motion.button>
-                <motion.button
+                <button
                   className="delete-profile-btn"
                   onClick={(e) => handleDeleteProfile(e, profile.id)}
-                  aria-label={`Delete profile ${profile.name}`}
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
                 >
                   <Trash2 size={16} />
-                </motion.button>
+                </button>
+                <div className="profile-avatar">{profile.avatar}</div>
+                <div className="profile-name">{profile.name}</div>
+                <div className="profile-stars">
+                  <Star size={14} fill="gold" color="gold" />
+                  <span>0</span>
+                </div>
               </motion.div>
             ))}
 
-            <motion.button
+            <motion.div
               className="profile-card add-profile"
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -96,11 +88,10 @@ export function ProfileSelect() {
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={() => setShowCreate(true)}
-              aria-label="Add new player"
             >
               <Plus size={48} />
               <div className="profile-name">Add Player</div>
-            </motion.button>
+            </motion.div>
           </div>
         </>
       ) : (
@@ -112,8 +103,8 @@ export function ProfileSelect() {
           <h2>New Player</h2>
 
           <div className="avatar-picker">
-            <p id="avatar-picker-label">Pick your buddy:</p>
-            <div className="avatar-grid" role="group" aria-labelledby="avatar-picker-label">
+            <p>Pick your buddy:</p>
+            <div className="avatar-grid">
               {avatarOptions.map((avatar) => (
                 <motion.button
                   key={avatar}
@@ -121,8 +112,6 @@ export function ProfileSelect() {
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.9 }}
                   onClick={() => setSelectedAvatar(avatar)}
-                  aria-label={selectedAvatar === avatar ? `Avatar ${avatar} selected` : `Select avatar ${avatar}`}
-                  aria-pressed={selectedAvatar === avatar}
                 >
                   {avatar}
                 </motion.button>
@@ -131,9 +120,8 @@ export function ProfileSelect() {
           </div>
 
           <div className="name-input-group">
-            <label htmlFor="profile-name">Your name:</label>
+            <label>Your name:</label>
             <input
-              id="profile-name"
               type="text"
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
