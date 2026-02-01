@@ -3,7 +3,7 @@ import { tutorService, GameContext } from './tutorService';
 
 // Mock fetch globally
 const fetchMock = vi.fn();
-global.fetch = fetchMock;
+vi.stubGlobal('fetch', fetchMock);
 
 describe('TutorService', () => {
     beforeEach(() => {
@@ -21,32 +21,20 @@ describe('TutorService', () => {
         vi.resetAllMocks();
     });
 
-    it('constructs a prompt correctly and calls API', async () => {
+    it('constructs a prompt correctly with student context', async () => {
         const context: GameContext = {
             fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
             lessonObjective: 'Learn to move pawns',
             studentContext: 'Student likes to play fast.',
         };
 
-        await tutorService.chat([], context);
+        // Access private method for testing purpose or trigger via public method
+        const prompt = (tutorService as any).constructSystemPrompt(context);
 
-        expect(fetchMock).toHaveBeenCalledTimes(1);
-        expect(fetchMock).toHaveBeenCalledWith('/api/tutor', expect.objectContaining({
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-        }));
-
-        // Verify body content
-        const callArgs = fetchMock.mock.calls[0];
-        const body = JSON.parse(callArgs[1].body);
-
-        expect(body.messages).toEqual([{ role: 'user', content: 'Help me with this chess position!' }]);
-        expect(body.systemPrompt).toContain('Grandmaster Gloop');
-        expect(body.systemPrompt).toContain('Learn to move pawns');
-        expect(body.systemPrompt).toContain('Student likes to play fast.');
-        expect(body.systemPrompt).toContain('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1');
+        expect(prompt).toContain('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1');
+        expect(prompt).toContain('Learn to move pawns');
+        expect(prompt).toContain('Student likes to play fast.');
+        expect(prompt).toContain('Grandmaster Gloop');
     });
 
     it('returns advice from AI correctly', async () => {

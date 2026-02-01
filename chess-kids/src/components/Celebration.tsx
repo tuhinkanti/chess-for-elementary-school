@@ -1,6 +1,13 @@
+<<<<<<< HEAD
+/* eslint-disable react-hooks/purity */
+import { useMemo } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Star } from 'lucide-react';
+=======
 import { motion, AnimatePresence } from 'framer-motion';
 import { Star } from 'lucide-react';
 import { useState } from 'react';
+>>>>>>> origin/main
 
 interface CelebrationProps {
   show: boolean;
@@ -9,6 +16,18 @@ interface CelebrationProps {
   onComplete: () => void;
 }
 
+<<<<<<< HEAD
+export function Celebration({ show, starsEarned, message, onComplete }: CelebrationProps) {
+  const confettiParticles = useMemo(() => [...Array(20)].map((_, i) => ({
+    id: i,
+    left: `${Math.random() * 100}%`,
+    backgroundColor: ['#ff6b6b', '#4ecdc4', '#ffe66d', '#95e1d3', '#f38181'][i % 5],
+    x: (Math.random() - 0.5) * 200,
+    rotate: Math.random() * 720,
+    duration: 2 + Math.random(),
+    delay: Math.random() * 0.5
+  })), []);
+=======
 interface ConfettiParticle {
   id: number;
   left: number;
@@ -47,6 +66,7 @@ export function Celebration({ show, starsEarned, message, onComplete }: Celebrat
       setConfettiParticles(generateConfettiParticles());
     }
   }
+>>>>>>> origin/main
 
   return (
     <AnimatePresence>
@@ -69,11 +89,22 @@ export function Celebration({ show, starsEarned, message, onComplete }: Celebrat
               className="celebration-stars"
               initial={{ y: -50, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
+<<<<<<< HEAD
+              transition={{ delay: 0.3 }}
+=======
               transition={{ delay: 0.3, type: 'spring', stiffness: 100 }}
+>>>>>>> origin/main
             >
               {[...Array(starsEarned)].map((_, i) => (
                 <motion.div
                   key={i}
+<<<<<<< HEAD
+                  initial={{ scale: 0, rotate: -180 }}
+                  animate={{ scale: 1, rotate: 0 }}
+                  transition={{ delay: 0.5 + i * 0.2, type: 'spring' }}
+                >
+                  <Star size={48} fill="gold" color="gold" />
+=======
                   initial={{ scale: 0, rotate: -20, y: 20 }}
                   animate={{ scale: 1, rotate: 0, y: 0 }}
                   transition={{
@@ -87,6 +118,7 @@ export function Celebration({ show, starsEarned, message, onComplete }: Celebrat
                   }}
                 >
                   <Star size={64} fill="#FFD700" color="#FFD700" />
+>>>>>>> origin/main
                 </motion.div>
               ))}
             </motion.div>
@@ -113,6 +145,14 @@ export function Celebration({ show, starsEarned, message, onComplete }: Celebrat
               key={particle.id}
               className="confetti"
               style={{
+<<<<<<< HEAD
+                left: particle.left,
+                backgroundColor: particle.backgroundColor,
+              }}
+              initial={{ y: -20, opacity: 1 }}
+              animate={{
+                y: '100vh',
+=======
                 left: `${particle.left}%`,
                 backgroundColor: particle.color,
                 width: particle.width,
@@ -122,13 +162,18 @@ export function Celebration({ show, starsEarned, message, onComplete }: Celebrat
               initial={{ y: -50, opacity: 1, rotate: 0 }}
               animate={{
                 y: '110vh',
+>>>>>>> origin/main
                 x: particle.x,
                 rotate: particle.rotate,
               }}
               transition={{
                 duration: particle.duration,
                 delay: particle.delay,
+<<<<<<< HEAD
+                ease: 'easeOut',
+=======
                 ease: [0.23, 1, 0.32, 1],
+>>>>>>> origin/main
               }}
             />
           ))}
@@ -136,4 +181,8 @@ export function Celebration({ show, starsEarned, message, onComplete }: Celebrat
       )}
     </AnimatePresence>
   );
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> origin/main
