@@ -5,7 +5,7 @@ import { LessonCard } from '../components/LessonCard';
 import { StarCounter } from '../components/StarCounter';
 import { ProfileBadge } from '../components/ProfileBadge';
 import { lessons } from '../data/lessons';
-import { useProfile } from '../hooks/useProfile';
+import { useProfile } from '../context/ProfileContext';
 
 export function Home() {
   const navigate = useNavigate();

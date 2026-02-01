@@ -18,7 +18,7 @@ import {
   resetObjectiveState,
   type LessonState,
 } from '../data/lessonEngine';
-import { useProfile } from '../hooks/useProfile';
+import { useProfile } from '../context/ProfileContext';
 
 export function LessonPage() {
   const { id } = useParams<{ id: string }>();
@@ -39,14 +39,11 @@ export function LessonPage() {
     }
   }, [currentProfile, navigate]);
 
-  const [prevLessonId, setPrevLessonId] = useState(lessonId);
-
-  if (lessonId !== prevLessonId) {
-    setPrevLessonId(lessonId);
+  useEffect(() => {
     setLessonState(createInitialLessonState());
     setShowStory(true);
     setShowCelebration(false);
-  }
+  }, [lessonId]);
 
   const currentObjective = config?.objectives[lessonState.currentObjectiveIndex];
 

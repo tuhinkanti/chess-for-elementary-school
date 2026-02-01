@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion';
 import { Lock, Star } from 'lucide-react';
 import type { Lesson } from '../data/lessons';
-import { useProfile } from '../hooks/useProfile';
+import { useProfile } from '../context/ProfileContext';
 
 interface LessonCardProps {
   lesson: Lesson;

@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { useProfile } from '../hooks/useProfile';
+import { useProfile } from '../context/ProfileContext';
 
 export function ProfileBadge() {
   const navigate = useNavigate();
