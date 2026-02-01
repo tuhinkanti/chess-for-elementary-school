@@ -6,6 +6,7 @@ interface ChessBoardProps {
   fen?: string;
   onMove?: (from: string, to: string, piece: string, isCapture: boolean) => boolean;
   highlightSquares?: string[];
+  customArrows?: string[][]; // Format: [['e2', 'e4']]
   interactive?: boolean;
   boardSize?: number;
 }
@@ -14,6 +15,7 @@ export function ChessBoard({
   fen,
   onMove,
   highlightSquares = [],
+  customArrows = [],
   interactive = true,
   boardSize = 400,
 }: ChessBoardProps) {
@@ -116,13 +118,14 @@ export function ChessBoard({
           onPieceDrop: onDrop,
           onSquareClick: handleSquareClick,
           squareStyles: customSquareStyles,
+          customArrows: customArrows as any, // AI Hints
           boardStyle: {
             borderRadius: '8px',
             boxShadow: '0 8px 24px rgba(0, 0, 0, 0.3)',
           },
           darkSquareStyle: { backgroundColor: '#779952' },
           lightSquareStyle: { backgroundColor: '#edeed1' },
-        }}
+        } as any}
       />
     </div>
   );

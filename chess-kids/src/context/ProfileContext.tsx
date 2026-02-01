@@ -46,7 +46,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
   }, [data]);
 
   const currentProfile = data.profiles.find(p => p.id === data.currentProfileId) || null;
-  const currentProgress = data.currentProfileId 
+  const currentProgress = data.currentProfileId
     ? (data.progress[data.currentProfileId] || defaultProgress)
     : defaultProgress;
 
@@ -82,7 +82,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     setData(prev => {
       const newProgress = { ...prev.progress };
       delete newProgress[profileId];
-      
+
       return {
         profiles: prev.profiles.filter(p => p.id !== profileId),
         currentProfileId: prev.currentProfileId === profileId ? null : prev.currentProfileId,
@@ -91,31 +91,69 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     });
   };
 
-  const updateProgress = (progress: Partial<ProfileProgress>) => {
+  const updateProgress = (updates: Partial<ProfileProgress>) => {
     if (!data.currentProfileId) return;
 
-    setData(prev => ({
-      ...prev,
-      progress: {
-        ...prev.progress,
-        [prev.currentProfileId!]: {
-          ...prev.progress[prev.currentProfileId!],
-          ...progress,
+    setData(prev => {
+      const currentId = prev.currentProfileId!;
+      const oldProgress = prev.progress[currentId] || defaultProgress;
+
+      return {
+        ...prev,
+        progress: {
+          ...prev.progress,
+          [currentId]: {
+            ...oldProgress,
+            ...updates,
+          },
         },
-      },
-    }));
+      };
+    });
   };
 
   const addStars = (count: number) => {
-    updateProgress({ stars: currentProgress.stars + count });
+    if (!data.currentProfileId) return;
+
+    setData(prev => {
+      const currentId = prev.currentProfileId!;
+      const oldProgress = prev.progress[currentId] || defaultProgress;
+
+      return {
+        ...prev,
+        progress: {
+          ...prev.progress,
+          [currentId]: {
+            ...oldProgress,
+            stars: oldProgress.stars + count,
+          },
+        },
+      };
+    });
   };
 
   const completeLesson = (lessonId: number) => {
-    if (!currentProgress.completedLessons.includes(lessonId)) {
-      updateProgress({
-        completedLessons: [...currentProgress.completedLessons, lessonId],
-      });
-    }
+    if (!data.currentProfileId) return;
+
+    setData(prev => {
+      const currentId = prev.currentProfileId!;
+      const oldProgress = prev.progress[currentId] || defaultProgress;
+
+      const newCompleted = oldProgress.completedLessons.includes(lessonId)
+        ? oldProgress.completedLessons
+        : [...oldProgress.completedLessons, lessonId];
+
+      return {
+        ...prev,
+        progress: {
+          ...prev.progress,
+          [currentId]: {
+            ...oldProgress,
+            completedLessons: newCompleted,
+            currentLesson: Math.max(oldProgress.currentLesson, lessonId + 1),
+          },
+        },
+      };
+    });
   };
 
   const resetProgress = () => {
