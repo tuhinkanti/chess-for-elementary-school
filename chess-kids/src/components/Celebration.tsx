@@ -1,6 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { Star } from 'lucide-react';
-import { useState } from 'react';
 
 interface CelebrationProps {
   show: boolean;
@@ -9,39 +8,7 @@ interface CelebrationProps {
   onComplete: () => void;
 }
 
-interface ConfettiParticle {
-  id: number;
-  left: number;
-  color: string;
-  x: number;
-  rotate: number;
-  duration: number;
-  delay: number;
-}
-
-function generateConfettiParticles(): ConfettiParticle[] {
-  return [...Array(20)].map((_, i) => ({
-    id: i,
-    left: Math.random() * 100,
-    color: ['#ff6b6b', '#4ecdc4', '#ffe66d', '#95e1d3', '#f38181'][i % 5],
-    x: (Math.random() - 0.5) * 200,
-    rotate: Math.random() * 720,
-    duration: 2 + Math.random(),
-    delay: Math.random() * 0.5,
-  }));
-}
-
 export function Celebration({ show, starsEarned, message, onComplete }: CelebrationProps) {
-  const [confettiParticles, setConfettiParticles] = useState(generateConfettiParticles);
-  const [prevShow, setPrevShow] = useState(show);
-
-  if (show !== prevShow) {
-    setPrevShow(show);
-    if (show) {
-      setConfettiParticles(generateConfettiParticles());
-    }
-  }
-
   return (
     <AnimatePresence>
       {show && (
@@ -94,23 +61,23 @@ export function Celebration({ show, starsEarned, message, onComplete }: Celebrat
           </motion.div>
 
           {/* Confetti particles */}
-          {confettiParticles.map((particle) => (
+          {[...Array(20)].map((_, i) => (
             <motion.div
-              key={particle.id}
+              key={i}
               className="confetti"
               style={{
-                left: `${particle.left}%`,
-                backgroundColor: particle.color,
+                left: `${Math.random() * 100}%`,
+                backgroundColor: ['#ff6b6b', '#4ecdc4', '#ffe66d', '#95e1d3', '#f38181'][i % 5],
               }}
               initial={{ y: -20, opacity: 1 }}
               animate={{
                 y: '100vh',
-                x: particle.x,
-                rotate: particle.rotate,
+                x: (Math.random() - 0.5) * 200,
+                rotate: Math.random() * 720,
               }}
               transition={{
-                duration: particle.duration,
-                delay: particle.delay,
+                duration: 2 + Math.random(),
+                delay: Math.random() * 0.5,
                 ease: 'easeOut',
               }}
             />
