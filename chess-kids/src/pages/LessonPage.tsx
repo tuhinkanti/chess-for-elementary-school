@@ -17,7 +17,7 @@ import {
   handleAnswer,
   type LessonState,
 } from '../data/lessonEngine';
-import { useProfile } from '../context/ProfileContext';
+import { useProfile } from '../hooks/useProfile';
 import { useChessTutor } from '../hooks/useChessTutor';
 import { useStudentMemory } from '../hooks/useStudentMemory';
 import { TutorMascot } from '../components/TutorMascot';

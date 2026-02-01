@@ -1,5 +1,6 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { Star } from 'lucide-react';
+import { useState } from 'react';
 
 interface CelebrationProps {
   show: boolean;
@@ -8,7 +9,45 @@ interface CelebrationProps {
   onComplete: () => void;
 }
 
+interface ConfettiParticle {
+  id: number;
+  left: number;
+  color: string;
+  x: number;
+  rotate: number;
+  duration: number;
+  delay: number;
+  width: number;
+  height: number;
+  borderRadius: string;
+}
+
+function generateConfettiParticles(): ConfettiParticle[] {
+  return [...Array(50)].map((_, i) => ({
+    id: i,
+    left: Math.random() * 100,
+    color: ['#ff6b6b', '#4ecdc4', '#ffe66d', '#95e1d3', '#f38181', '#a29bfe', '#fab1a0'][i % 7],
+    x: (Math.random() - 0.5) * 400,
+    rotate: Math.random() * 1080,
+    duration: 3 + Math.random() * 2,
+    delay: Math.random() * 1,
+    width: Math.random() * 12 + 6,
+    height: Math.random() * 12 + 6,
+    borderRadius: i % 2 === 0 ? '50%' : '2px',
+  }));
+}
+
 export function Celebration({ show, starsEarned, message, onComplete }: CelebrationProps) {
+  const [confettiParticles, setConfettiParticles] = useState(generateConfettiParticles);
+  const [prevShow, setPrevShow] = useState(show);
+
+  if (show !== prevShow) {
+    setPrevShow(show);
+    if (show) {
+      setConfettiParticles(generateConfettiParticles());
+    }
+  }
+
   return (
     <AnimatePresence>
       {show && (
@@ -69,26 +108,26 @@ export function Celebration({ show, starsEarned, message, onComplete }: Celebrat
           </motion.div>
 
           {/* Confetti particles */}
-          {[...Array(50)].map((_, i) => (
+          {confettiParticles.map((particle) => (
             <motion.div
-              key={i}
+              key={particle.id}
               className="confetti"
               style={{
-                left: `${Math.random() * 100}%`,
-                backgroundColor: ['#ff6b6b', '#4ecdc4', '#ffe66d', '#95e1d3', '#f38181', '#a29bfe', '#fab1a0'][i % 7],
-                width: Math.random() * 12 + 6,
-                height: Math.random() * 12 + 6,
-                borderRadius: i % 2 === 0 ? '50%' : '2px',
+                left: `${particle.left}%`,
+                backgroundColor: particle.color,
+                width: particle.width,
+                height: particle.height,
+                borderRadius: particle.borderRadius,
               }}
               initial={{ y: -50, opacity: 1, rotate: 0 }}
               animate={{
                 y: '110vh',
-                x: (Math.random() - 0.5) * 400,
-                rotate: Math.random() * 1080,
+                x: particle.x,
+                rotate: particle.rotate,
               }}
               transition={{
-                duration: 3 + Math.random() * 2,
-                delay: Math.random() * 1,
+                duration: particle.duration,
+                delay: particle.delay,
                 ease: [0.23, 1, 0.32, 1],
               }}
             />

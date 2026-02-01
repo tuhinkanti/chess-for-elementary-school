@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Plus, Trash2, Star } from 'lucide-react';
-import { useProfile } from '../context/ProfileContext';
+import { useProfile } from '../hooks/useProfile';
 import { avatarOptions } from '../data/profiles';
 
 export function ProfileSelect() {

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { Chessboard, type SquareHandlerArgs, type PieceDropHandlerArgs } from 'react-chessboard';
 import { Chess, type Square } from 'chess.js';
 
@@ -11,20 +11,25 @@ interface ChessBoardProps {
   boardSize?: number;
 }
 
+const EMPTY_HIGHLIGHTS: string[] = [];
+
 export function ChessBoard({
   fen,
   onMove,
-  highlightSquares = [],
+  highlightSquares = EMPTY_HIGHLIGHTS,
   customArrows = [],
   interactive = true,
   boardSize = 400,
 }: ChessBoardProps) {
   const [game, setGame] = useState(() => new Chess(fen));
-  const [selectedSquare, setSelectedSquare] = useState<string | null>(null);
+  const [prevFen, setPrevFen] = useState(fen);
 
-  useEffect(() => {
+  if (fen !== prevFen) {
+    setPrevFen(fen);
     setGame(new Chess(fen));
-  }, [fen]);
+  }
+
+  const [selectedSquare, setSelectedSquare] = useState<string | null>(null);
 
   const getMoveOptions = (square: Square) => {
     const moves = game.moves({ square, verbose: true });
@@ -90,25 +95,29 @@ export function ChessBoard({
     return handleMove(sourceSquare, targetSquare);
   };
 
-  const customSquareStyles: Record<string, React.CSSProperties> = {
-    ...moveSquares,
-  };
-
-  if (selectedSquare) {
-    customSquareStyles[selectedSquare] = {
-      backgroundColor: 'rgba(255, 217, 61, 0.4)',
-      boxShadow: 'inset 0 0 20px rgba(255, 217, 61, 0.6)',
+  const customSquareStyles = useMemo(() => {
+    const styles: Record<string, React.CSSProperties> = {
+      ...moveSquares,
     };
-  }
 
-  highlightSquares.forEach((sq) => {
-    customSquareStyles[sq] = {
-      ...customSquareStyles[sq],
-      boxShadow: 'inset 0 0 15px rgba(255, 217, 61, 0.8), 0 0 10px rgba(255, 217, 61, 0.4)',
-      border: '3px solid var(--secondary)',
-      zIndex: 2,
-    };
-  });
+    if (selectedSquare) {
+      styles[selectedSquare] = {
+        backgroundColor: 'rgba(255, 217, 61, 0.4)',
+        boxShadow: 'inset 0 0 20px rgba(255, 217, 61, 0.6)',
+      };
+    }
+
+    highlightSquares.forEach((sq) => {
+      styles[sq] = {
+        ...styles[sq],
+        boxShadow: 'inset 0 0 15px rgba(255, 217, 61, 0.8), 0 0 10px rgba(255, 217, 61, 0.4)',
+        border: '3px solid var(--secondary)',
+        zIndex: 2,
+      };
+    });
+
+    return styles;
+  }, [moveSquares, selectedSquare, highlightSquares]);
 
   return (
     <div className="chess-board-container" style={{ width: boardSize, height: boardSize }}>

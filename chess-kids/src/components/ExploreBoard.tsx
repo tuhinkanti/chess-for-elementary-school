@@ -21,8 +21,7 @@ export function ExploreBoard({
 }: ExploreBoardProps) {
   const squareSize = boardSize / 8;
 
-  const isLightSquare = (file: string, rank: number) => {
-    const fileIndex = FILES.indexOf(file);
+  const isLightSquare = (fileIndex: number, rank: number) => {
     return (fileIndex + rank) % 2 === 1;
   };
 
@@ -71,9 +70,9 @@ export function ExploreBoard({
       }}
     >
       {RANKS.map((rank) =>
-        FILES.map((file) => {
+        FILES.map((file, fileIndex) => {
           const square = `${file}${rank}`;
-          const isLight = isLightSquare(file, rank);
+          const isLight = isLightSquare(fileIndex, rank);
           const styles = getSquareStyle(square, isLight);
           const isFirstFile = file === 'a';
           const isLastRank = rank === 1;
