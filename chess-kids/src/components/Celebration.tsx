@@ -1,9 +1,7 @@
 /* eslint-disable react-hooks/purity */
-import { useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Star } from 'lucide-react';
 import { useState } from 'react';
-import { i } from 'framer-motion/client';
 
 interface CelebrationProps {
   show: boolean;
