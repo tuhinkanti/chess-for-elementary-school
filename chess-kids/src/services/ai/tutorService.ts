@@ -14,6 +14,7 @@ interface TutorResponse {
     mood: "encouraging" | "thinking" | "surprised" | "celebrating";
     highlightSquare?: string;
     drawArrow?: string; // Format: "e2-e4"
+    learnedFacts?: string[]; // New facts learned about the student
 }
 
 interface GameContext {
@@ -98,12 +99,16 @@ Instructions:
 2. If the user made a mistake, explain WHY plainly (no complex notation).
 3. Reference what you know about the student's strengths and struggles if relevant.
 4. Keep responses SHORT - 1-3 sentences max for young learners.
-5. Always respond with valid JSON.
+5. Identify NEW facts about the student based on this interaction (e.g., "Student struggles with knights", "Student likes visual hints") and include them in 'learnedFacts'.
+6. Always respond with valid JSON.
 
 Response format:
 {
   "message": string (your friendly response),
-  "mood": "encouraging" | "thinking" | "surprised" | "celebrating"
+  "mood": "encouraging" | "thinking" | "surprised" | "celebrating",
+  "highlightSquare": string (optional),
+  "drawArrow": string (optional "e2-e4"),
+  "learnedFacts": string[] (optional list of new observations)
 }
     `.trim();
     }
