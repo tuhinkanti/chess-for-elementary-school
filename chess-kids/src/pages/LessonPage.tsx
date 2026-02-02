@@ -55,12 +55,8 @@ export function LessonPage() {
 
   // Start session when lesson begins
   useEffect(() => {
-    setLessonState(createInitialLessonState());
-    setShowStory(true);
-    setShowCelebration(false);
     memory.startSession(lessonId);
-    prevMoveCount.current = 0;
-
+    
     // End session when leaving
     return () => {
       memory.endSession();
@@ -202,7 +198,7 @@ export function LessonPage() {
       lessonObjective: currentObjective?.description,
       studentContext,
     });
-  }, [sendMessage, config, currentObjective, memory, currentFen, lastMove]);
+  }, [sendMessage, currentObjective, memory, currentFen, lastMove]);
 
   const handleCelebrationComplete = () => {
     clearChat();
