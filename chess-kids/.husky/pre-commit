@@ -1,0 +1,8 @@
+#!/bin/sh
+echo "🔍 Running Lint..."
+npm run lint || exit 1
+
+echo "🧪 Running Tests..."
+npm run test:run || exit 1
+
+echo "✅ All checks passed!"
