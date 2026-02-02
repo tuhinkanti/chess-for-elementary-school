@@ -1,4 +1,7 @@
 #!/bin/sh
+echo "🔍 Running Gemini Code Review..."
+gemini --yolo --prompt "/code-review --fix" || exit 1
+
 echo "🔍 Running Lint..."
 npm run lint || exit 1
 
