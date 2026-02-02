@@ -74,10 +74,9 @@ export function ChessBoard({
   const handleMove = (from: string, to: string) => {
     try {
       const piece = game.get(from as Square)?.type || '';
-      const targetPiece = game.get(to as Square);
-      const isCapture = targetPiece !== null;
 
       const move = game.move({ from, to, promotion: 'q' });
+      const isCapture = !!move?.captured; // Check capture flag from move result
       if (move) {
         const whiteTurnFen = game.fen().replace(/ [bw] /, ' w ');
         setGame(new Chess(whiteTurnFen));
