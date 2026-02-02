@@ -1,33 +1,11 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useContext, useState, useEffect, useMemo, type ReactNode } from 'react';
+import { useContext, useState, useEffect, useMemo, type ReactNode } from 'react';
 import { type Profile, type ProfileProgress, generateId } from '../data/profiles';
-
-interface ProfilesData {
-  profiles: Profile[];
-  currentProfileId: string | null;
-  progress: Record<string, ProfileProgress>;
-}
-
-interface ProfileContextType {
-  profiles: Profile[];
-  currentProfile: Profile | null;
-  currentProgress: ProfileProgress;
-  createProfile: (name: string, avatar: string) => Profile;
-  selectProfile: (profileId: string) => void;
-  deleteProfile: (profileId: string) => void;
-  updateProgress: (progress: Partial<ProfileProgress>) => void;
-  addStars: (count: number) => void;
-  completeLesson: (lessonId: number) => void;
-  resetProgress: () => void;
-}
-
-const defaultProgress: ProfileProgress = {
-  stars: 0,
-  completedLessons: [],
-  currentLesson: 1,
-};
-
-const ProfileContext = createContext<ProfileContextType | undefined>(undefined);
+import {
+  ProfileContext,
+  type ProfilesData,
+  defaultProgress,
+} from './ProfileContextDefinition';
 
 export function ProfileProvider({ children }: { children: ReactNode }) {
   const [data, setData] = useState<ProfilesData>(() => {
@@ -50,7 +28,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     return data.profiles.find(p => p.id === data.currentProfileId) || null;
   }, [data.profiles, data.currentProfileId]);
 
-  const currentProgress = data.currentProfileId 
+  const currentProgress = data.currentProfileId
     ? (data.progress[data.currentProfileId] || defaultProgress)
     : defaultProgress;
 
@@ -86,7 +64,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     setData(prev => {
       const newProgress = { ...prev.progress };
       delete newProgress[profileId];
-      
+
       return {
         profiles: prev.profiles.filter(p => p.id !== profileId),
         currentProfileId: prev.currentProfileId === profileId ? null : prev.currentProfileId,
@@ -95,31 +73,69 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     });
   };
 
-  const updateProgress = (progress: Partial<ProfileProgress>) => {
+  const updateProgress = (updates: Partial<ProfileProgress>) => {
     if (!data.currentProfileId) return;
 
-    setData(prev => ({
-      ...prev,
-      progress: {
-        ...prev.progress,
-        [prev.currentProfileId!]: {
-          ...prev.progress[prev.currentProfileId!],
-          ...progress,
+    setData(prev => {
+      const currentId = prev.currentProfileId!;
+      const oldProgress = prev.progress[currentId] || defaultProgress;
+
+      return {
+        ...prev,
+        progress: {
+          ...prev.progress,
+          [currentId]: {
+            ...oldProgress,
+            ...updates,
+          },
         },
-      },
-    }));
+      };
+    });
   };
 
   const addStars = (count: number) => {
-    updateProgress({ stars: currentProgress.stars + count });
+    if (!data.currentProfileId) return;
+
+    setData(prev => {
+      const currentId = prev.currentProfileId!;
+      const oldProgress = prev.progress[currentId] || defaultProgress;
+
+      return {
+        ...prev,
+        progress: {
+          ...prev.progress,
+          [currentId]: {
+            ...oldProgress,
+            stars: oldProgress.stars + count,
+          },
+        },
+      };
+    });
   };
 
   const completeLesson = (lessonId: number) => {
-    if (!currentProgress.completedLessons.includes(lessonId)) {
-      updateProgress({
-        completedLessons: [...currentProgress.completedLessons, lessonId],
-      });
-    }
+    if (!data.currentProfileId) return;
+
+    setData(prev => {
+      const currentId = prev.currentProfileId!;
+      const oldProgress = prev.progress[currentId] || defaultProgress;
+
+      const newCompleted = oldProgress.completedLessons.includes(lessonId)
+        ? oldProgress.completedLessons
+        : [...oldProgress.completedLessons, lessonId];
+
+      return {
+        ...prev,
+        progress: {
+          ...prev.progress,
+          [currentId]: {
+            ...oldProgress,
+            completedLessons: newCompleted,
+            currentLesson: Math.max(oldProgress.currentLesson, lessonId + 1),
+          },
+        },
+      };
+    });
   };
 
   const resetProgress = () => {
@@ -148,7 +164,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
 
 export function useProfile() {
   const context = useContext(ProfileContext);
-  if (!context) {
+  if (context === undefined) {
     throw new Error('useProfile must be used within a ProfileProvider');
   }
   return context;

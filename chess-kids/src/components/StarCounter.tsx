@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { Star } from 'lucide-react';
-import { useProfile } from '../context/ProfileContext';
+import { useProfile } from '../hooks/useProfile';
 
 export function StarCounter() {
   const { currentProgress } = useProfile();

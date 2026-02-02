@@ -6,6 +6,7 @@ interface ChessBoardProps {
   fen?: string;
   onMove?: (from: string, to: string, piece: string, isCapture: boolean) => boolean;
   highlightSquares?: string[];
+  customArrows?: string[][]; // Format: [['e2', 'e4']]
   interactive?: boolean;
   boardSize?: number;
 }
@@ -16,10 +17,12 @@ export function ChessBoard({
   fen,
   onMove,
   highlightSquares = EMPTY_HIGHLIGHTS,
+  customArrows = [],
   interactive = true,
   boardSize = 400,
 }: ChessBoardProps) {
   const [game, setGame] = useState(() => new Chess(fen));
+
   const [selectedSquare, setSelectedSquare] = useState<string | null>(null);
   const [moveSquares, setMoveSquares] = useState<Record<string, React.CSSProperties>>({});
 
@@ -39,9 +42,10 @@ export function ChessBoard({
     moves.forEach((move) => {
       highlights[move.to] = {
         background: game.get(move.to as Square)
-          ? 'radial-gradient(circle, rgba(255,0,0,0.4) 85%, transparent 85%)'
-          : 'radial-gradient(circle, rgba(0,200,0,0.4) 25%, transparent 25%)',
+          ? 'radial-gradient(circle, rgba(255, 107, 107, 0.5) 85%, transparent 85%)'
+          : 'radial-gradient(circle, rgba(107, 203, 119, 0.4) 25%, transparent 25%)',
         borderRadius: '50%',
+        boxShadow: game.get(move.to as Square) ? '0 0 10px rgba(255, 107, 107, 0.3)' : 'none',
       };
     });
 
@@ -100,14 +104,17 @@ export function ChessBoard({
 
     if (selectedSquare) {
       styles[selectedSquare] = {
-        backgroundColor: 'rgba(255, 255, 0, 0.4)',
+        backgroundColor: 'rgba(255, 217, 61, 0.4)',
+        boxShadow: 'inset 0 0 20px rgba(255, 217, 61, 0.6)',
       };
     }
 
     highlightSquares.forEach((sq) => {
       styles[sq] = {
         ...styles[sq],
-        boxShadow: 'inset 0 0 0 4px rgba(255, 200, 0, 0.8)',
+        boxShadow: 'inset 0 0 15px rgba(255, 217, 61, 0.8), 0 0 10px rgba(255, 217, 61, 0.4)',
+        border: '3px solid var(--secondary)',
+        zIndex: 2,
       };
     });
 
@@ -122,13 +129,14 @@ export function ChessBoard({
           onPieceDrop: onDrop,
           onSquareClick: handleSquareClick,
           squareStyles: customSquareStyles,
+          customArrows: customArrows as any, // AI Hints
           boardStyle: {
             borderRadius: '8px',
             boxShadow: '0 8px 24px rgba(0, 0, 0, 0.3)',
           },
           darkSquareStyle: { backgroundColor: '#779952' },
           lightSquareStyle: { backgroundColor: '#edeed1' },
-        }}
+        } as any}
       />
     </div>
   );

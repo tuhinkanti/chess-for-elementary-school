@@ -15,10 +15,12 @@ import {
   handleSquareTap,
   handleMove,
   handleAnswer,
-  resetObjectiveState,
   type LessonState,
 } from '../data/lessonEngine';
-import { useProfile } from '../context/ProfileContext';
+import { useProfile } from '../hooks/useProfile';
+import { useChessTutor } from '../hooks/useChessTutor';
+import { useStudentMemory } from '../hooks/useStudentMemory';
+import { TutorMascot } from '../components/TutorMascot';
 
 export function LessonPage() {
   const { id } = useParams<{ id: string }>();
@@ -33,19 +35,27 @@ export function LessonPage() {
   const [showCelebration, setShowCelebration] = useState(false);
   const [showStory, setShowStory] = useState(true);
 
+  // Memory system
+  const memory = useStudentMemory(currentProfile?.id);
+
   useEffect(() => {
     if (!currentProfile) {
       navigate('/profiles');
     }
   }, [currentProfile, navigate]);
 
-  const [prevLessonId, setPrevLessonId] = useState(lessonId);
-  if (lessonId !== prevLessonId) {
-    setPrevLessonId(lessonId);
+  // Start session when lesson begins
+  useEffect(() => {
     setLessonState(createInitialLessonState());
     setShowStory(true);
     setShowCelebration(false);
-  }
+    memory.startSession(lessonId);
+
+    // End session when leaving
+    return () => {
+      memory.endSession();
+    };
+  }, [lessonId, memory]);
 
   const currentObjective = config?.objectives[lessonState.currentObjectiveIndex];
 
@@ -59,12 +69,22 @@ export function LessonPage() {
       const nextIndex = lessonState.currentObjectiveIndex + 1;
       const newCompleted = [...lessonState.completedObjectives, currentObjective.id];
 
+      // Record to memory
+      memory.recordObjectiveCompleted(currentObjective.id);
+
       if (nextIndex >= config.objectives.length) {
         // All objectives done!
         // eslint-disable-next-line react-hooks/set-state-in-effect
         setShowCelebration(true);
         addStars(3);
         completeLesson(lessonId);
+
+        // Record milestone
+        memory.addFact(
+          `Completed lesson ${lessonId}: ${lesson?.title}`,
+          'milestone',
+          `lesson-${lessonId}`
+        );
 
         setLessonState(prev => ({
           ...prev,
@@ -74,13 +94,13 @@ export function LessonPage() {
       } else {
         // Advance to next objective
         setLessonState(prev => ({
-          ...resetObjectiveState(prev),
+          ...prev,
           completedObjectives: newCompleted,
           currentObjectiveIndex: nextIndex,
         }));
       }
     }
-  }, [lessonState, config, currentObjective, lessonId, addStars, completeLesson, showCelebration]);
+  }, [lessonState, config, currentObjective, lessonId, addStars, completeLesson, showCelebration, memory, lesson]);
 
   const onSquareTap = useCallback((square: string) => {
     setLessonState((prev) => handleSquareTap(square, prev));
@@ -96,7 +116,35 @@ export function LessonPage() {
     setLessonState((prev) => handleAnswer(prev, isCorrect));
   }, []);
 
+  const { messages, sendMessage, startConversation, isLoading, clearChat, latestResponse } = useChessTutor();
+
+  const handleAskTutor = useCallback(() => {
+    if (!config) return;
+
+    // Get student context from memory
+    const studentContext = memory.getContextForAI();
+
+    startConversation({
+      fen: config.fen || 'start',
+      lessonObjective: currentObjective?.description,
+      studentContext,
+    });
+
+    // Record the interaction
+    memory.recordTutorInteraction('message', currentObjective?.description || 'general', 'asked');
+  }, [config, currentObjective, startConversation, memory]);
+
+  const handleSendMessage = useCallback((userMessage: string) => {
+    const studentContext = memory.getContextForAI();
+    sendMessage(userMessage, {
+      fen: config?.fen || 'start',
+      lessonObjective: currentObjective?.description,
+      studentContext,
+    });
+  }, [sendMessage, config, currentObjective, memory]);
+
   const handleCelebrationComplete = () => {
+    clearChat();
     setShowCelebration(false);
     if (lessonId < lessons.length) {
       navigate(`/lesson/${lessonId + 1}`);
@@ -160,16 +208,27 @@ export function LessonPage() {
               />
             ) : (
               <ChessBoard
-                key={`${lessonId}-${lessonState.currentObjectiveIndex}`}
+                key={`lesson-${lessonId}`}
                 fen={config.fen || undefined}
                 onMove={(from, to, piece, isCapture) => onChessMove(from, to, piece, isCapture)}
                 boardSize={Math.min(400, window.innerWidth - 40)}
+                highlightSquares={latestResponse?.highlightSquare ? [latestResponse.highlightSquare] : []}
+                customArrows={latestResponse?.drawArrow ? [latestResponse.drawArrow.split('-')] : []}
               />
             )}
           </div>
 
           <div className="objectives-section">
-            <h3>Goals:</h3>
+            <div className="objectives-header">
+              <h3>Goals:</h3>
+              <button
+                className="ask-tutor-button"
+                onClick={handleAskTutor}
+                disabled={isLoading}
+              >
+                {isLoading ? 'Thinking...' : '💡 Ask Gloop'}
+              </button>
+            </div>
             <ul className="objectives-list">
               {config.objectives.map((objective, index) => {
                 const isCompleted = lessonState.completedObjectives.includes(objective.id);
@@ -207,6 +266,42 @@ export function LessonPage() {
         message="Amazing job! 🎉"
         onComplete={handleCelebrationComplete}
       />
+
+      <TutorMascot
+        messages={messages}
+        isLoading={isLoading}
+        onSendMessage={handleSendMessage}
+        onClose={clearChat}
+        latestMood={latestResponse?.mood}
+      />
+
+      <style>{`
+        .objectives-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 1rem;
+        }
+        .ask-tutor-button {
+          background: var(--secondary);
+          color: white;
+          border: none;
+          padding: 8px 16px;
+          border-radius: 20px;
+          font-weight: bold;
+          cursor: pointer;
+          transition: transform 0.2s;
+          box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+        .ask-tutor-button:hover {
+          transform: translateY(-2px);
+          filter: brightness(1.1);
+        }
+        .ask-tutor-button:disabled {
+          opacity: 0.7;
+          cursor: wait;
+        }
+      `}</style>
     </div>
   );
 }

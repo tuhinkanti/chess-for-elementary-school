@@ -5,28 +5,36 @@
 }
 
 :root {
-  --primary: #4a90d9;
-  --primary-dark: #357abd;
-  --secondary: #ffd93d;
-  --success: #6bcb77;
-  --background: #1a1a2e;
-  --surface: #16213e;
+  --primary: hsl(210, 100%, 65%);
+  --primary-dark: hsl(210, 100%, 45%);
+  --secondary: hsl(45, 100%, 65%);
+  --success: hsl(125, 55%, 65%);
+  --background: #0a0a1a;
+  --surface: rgba(255, 255, 255, 0.05);
+  --surface-hover: rgba(255, 255, 255, 0.1);
+  --glass-bg: rgba(255, 255, 255, 0.03);
+  --glass-border: rgba(255, 255, 255, 0.1);
   --text: #ffffff;
-  --text-muted: #a0a0a0;
+  --text-muted: rgba(255, 255, 255, 0.6);
+  --shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
 }
 
 body {
-  font-family: 'Nunito', 'Segoe UI', sans-serif;
-  background: linear-gradient(135deg, var(--background) 0%, #0f0f23 100%);
+  font-family: 'Outfit', 'Nunito', 'Segoe UI', sans-serif;
+  background: radial-gradient(circle at top right, #1a1a3a, #0a0a1a 60%),
+    radial-gradient(circle at bottom left, #2a1a3a, #0a0a1a 60%);
+  background-attachment: fixed;
   color: var(--text);
   min-height: 100vh;
+  overflow-x: hidden;
 }
 
 .app {
   min-height: 100vh;
-  padding: 1rem;
+  padding: 2rem 1rem;
   max-width: 1200px;
   margin: 0 auto;
+  position: relative;
 }
 
 /* Home Page */
@@ -61,11 +69,14 @@ body {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  background: var(--surface);
-  padding: 0.5rem 1rem;
+  background: var(--glass-bg);
+  backdrop-filter: blur(10px);
+  padding: 0.5rem 1.25rem;
   border-radius: 2rem;
-  font-size: 1.2rem;
-  font-weight: bold;
+  font-size: 1.1rem;
+  font-weight: 700;
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--shadow);
 }
 
 /* Lessons Grid */
@@ -77,23 +88,30 @@ body {
 
 /* Lesson Card */
 .lesson-card {
-  background: var(--surface);
-  border-radius: 1rem;
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  border-radius: 1.25rem;
   padding: 1.5rem;
   display: flex;
-  gap: 1rem;
+  gap: 1.25rem;
   cursor: pointer;
-  transition: all 0.2s;
-  border: 2px solid transparent;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--shadow);
+  position: relative;
+  overflow: hidden;
 }
 
 .lesson-card.unlocked:hover {
+  transform: translateY(-5px);
+  background: var(--surface-hover);
   border-color: var(--primary);
-  box-shadow: 0 8px 24px rgba(74, 144, 217, 0.3);
+  box-shadow: 0 12px 40px rgba(74, 144, 217, 0.2);
 }
 
 .lesson-card.locked {
-  opacity: 0.6;
+  opacity: 0.5;
+  filter: grayscale(0.8);
   cursor: not-allowed;
 }
 
@@ -102,13 +120,14 @@ body {
 }
 
 .lesson-icon {
-  width: 60px;
-  height: 60px;
+  width: 64px;
+  height: 64px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--background);
+  background: rgba(255, 255, 255, 0.05);
   border-radius: 1rem;
+  flex-shrink: 0;
 }
 
 .icon-emoji {
@@ -176,12 +195,15 @@ body {
 
 /* Story Container */
 .story-container {
-  background: var(--surface);
-  border-radius: 1.5rem;
-  padding: 2rem;
+  background: var(--glass-bg);
+  backdrop-filter: blur(16px);
+  border-radius: 2rem;
+  padding: 2.5rem;
   text-align: center;
-  max-width: 500px;
-  margin: 0 auto;
+  max-width: 550px;
+  margin: 2rem auto;
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--shadow);
 }
 
 .story-icon {
@@ -239,10 +261,13 @@ body {
 }
 
 .objectives-section {
-  background: var(--surface);
-  border-radius: 1rem;
-  padding: 1.5rem;
-  min-width: 280px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  border-radius: 1.5rem;
+  padding: 2rem;
+  min-width: 320px;
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--shadow);
 }
 
 .objectives-section h3 {
@@ -287,10 +312,13 @@ body {
 
 /* Number Picker */
 .number-picker {
-  background: var(--surface);
-  border-radius: 1.5rem;
-  padding: 2rem;
+  background: var(--glass-bg);
+  backdrop-filter: blur(16px);
+  border-radius: 2rem;
+  padding: 2.5rem;
   text-align: center;
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--shadow);
 }
 
 .picker-title {
@@ -391,17 +419,22 @@ body {
 }
 
 .profile-card {
-  background: var(--surface);
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
   border-radius: 1.5rem;
   padding: 1.5rem 1rem;
   cursor: pointer;
   position: relative;
-  border: 2px solid transparent;
-  transition: all 0.2s;
+  border: 1px solid var(--glass-border);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: var(--shadow);
 }
 
 .profile-card:hover {
+  transform: translateY(-8px);
+  background: var(--surface-hover);
   border-color: var(--primary);
+  box-shadow: 0 15px 45px rgba(0, 0, 0, 0.4);
 }
 
 .profile-card.add-profile {
@@ -438,6 +471,20 @@ body {
   font-size: 0.9rem;
 }
 
+.profile-content-btn {
+  background: transparent;
+  border: none;
+  padding: 0;
+  width: 100%;
+  text-align: inherit;
+  font: inherit;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: inherit;
+}
+
 .delete-profile-btn {
   position: absolute;
   top: 0.5rem;
@@ -460,14 +507,21 @@ body {
   background: rgba(255, 100, 100, 0.4);
 }
 
+.delete-profile-btn:focus-visible {
+  opacity: 1;
+}
+
 /* Create Profile Form */
 .create-profile-form {
-  background: var(--surface);
-  border-radius: 1.5rem;
-  padding: 2rem;
-  max-width: 400px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px);
+  border-radius: 2rem;
+  padding: 2.5rem;
+  max-width: 450px;
   margin: 2rem auto;
   text-align: left;
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--shadow);
 }
 
 .create-profile-form h2 {
@@ -581,17 +635,21 @@ body {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  background: var(--surface);
-  border: none;
-  padding: 0.4rem 0.75rem 0.4rem 0.4rem;
+  background: var(--glass-bg);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--glass-border);
+  padding: 0.4rem 1rem 0.4rem 0.4rem;
   border-radius: 2rem;
   cursor: pointer;
   color: var(--text);
-  transition: background 0.2s;
+  transition: all 0.2s;
+  box-shadow: var(--shadow);
 }
 
 .profile-badge:hover {
   background: var(--primary);
+  border-color: var(--primary);
+  transform: scale(1.02);
 }
 
 .badge-avatar {
