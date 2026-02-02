@@ -34,9 +34,14 @@ export function LessonPage() {
   const [lessonState, setLessonState] = useState<LessonState>(createInitialLessonState);
   const [showCelebration, setShowCelebration] = useState(false);
   const [showStory, setShowStory] = useState(true);
+  const [currentFen, setCurrentFen] = useState<string>(config?.fen || 'start');
+  const [lastMove, setLastMove] = useState<string | undefined>(undefined);
 
   // Memory system
   const memory = useStudentMemory(currentProfile?.id);
+
+  // AI Tutor
+  const { messages, sendMessage, startConversation, encourageObjective, isLoading, clearChat, latestResponse } = useChessTutor();
 
   useEffect(() => {
     if (!currentProfile) {
@@ -86,12 +91,18 @@ export function LessonPage() {
           `lesson-${lessonId}`
         );
 
+        // Gloop celebrates the lesson completion!
+        encourageObjective(currentObjective.description, true);
+
         setLessonState(prev => ({
           ...prev,
           completedObjectives: newCompleted,
           currentObjectiveIndex: nextIndex,
         }));
       } else {
+        // Gloop encourages for completing this objective!
+        encourageObjective(currentObjective.description, false);
+
         // Advance to next objective
         setLessonState(prev => ({
           ...prev,
@@ -100,14 +111,16 @@ export function LessonPage() {
         }));
       }
     }
-  }, [lessonState, config, currentObjective, lessonId, addStars, completeLesson, showCelebration, memory, lesson]);
+  }, [lessonState, config, currentObjective, lessonId, addStars, completeLesson, showCelebration, memory, lesson, encourageObjective]);
 
   const onSquareTap = useCallback((square: string) => {
     setLessonState((prev) => handleSquareTap(square, prev));
   }, []);
 
-  const onChessMove = useCallback((from: string, to: string, piece: string, isCapture: boolean) => {
+  const onChessMove = useCallback((from: string, to: string, piece: string, isCapture: boolean, newFen: string) => {
     setLessonState((prev) => handleMove(prev, { from, to, piece, isCapture }));
+    setCurrentFen(newFen);
+    setLastMove(`${from}-${to}`);
     return true;
   }, []);
 
@@ -116,7 +129,6 @@ export function LessonPage() {
     setLessonState((prev) => handleAnswer(prev, isCorrect));
   }, []);
 
-  const { messages, sendMessage, startConversation, isLoading, clearChat, latestResponse } = useChessTutor();
 
   const handleAskTutor = useCallback(() => {
     if (!config) return;
@@ -125,7 +137,8 @@ export function LessonPage() {
     const studentContext = memory.getContextForAI();
 
     startConversation({
-      fen: config.fen || 'start',
+      fen: currentFen,
+      lastMove,
       lessonObjective: currentObjective?.description,
       studentContext,
     });
@@ -137,7 +150,8 @@ export function LessonPage() {
   const handleSendMessage = useCallback((userMessage: string) => {
     const studentContext = memory.getContextForAI();
     sendMessage(userMessage, {
-      fen: config?.fen || 'start',
+      fen: currentFen,
+      lastMove,
       lessonObjective: currentObjective?.description,
       studentContext,
     });
@@ -210,7 +224,7 @@ export function LessonPage() {
               <ChessBoard
                 key={`lesson-${lessonId}`}
                 fen={config.fen || undefined}
-                onMove={(from, to, piece, isCapture) => onChessMove(from, to, piece, isCapture)}
+                onMove={(from, to, piece, isCapture, newFen) => onChessMove(from, to, piece, isCapture, newFen)}
                 boardSize={Math.min(400, window.innerWidth - 40)}
                 highlightSquares={latestResponse?.highlightSquare ? [latestResponse.highlightSquare] : []}
                 customArrows={latestResponse?.drawArrow ? [latestResponse.drawArrow.split('-')] : []}

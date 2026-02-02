@@ -4,7 +4,7 @@ import { Chess, type Square } from 'chess.js';
 
 interface ChessBoardProps {
   fen?: string;
-  onMove?: (from: string, to: string, piece: string, isCapture: boolean) => boolean;
+  onMove?: (from: string, to: string, piece: string, isCapture: boolean, newFen: string) => boolean;
   highlightSquares?: string[];
   customArrows?: string[][]; // Format: [['e2', 'e4']]
   interactive?: boolean;
@@ -81,7 +81,7 @@ export function ChessBoard({
         const whiteTurnFen = game.fen().replace(/ [bw] /, ' w ');
         setGame(new Chess(whiteTurnFen));
         if (onMove) {
-          return onMove(from, to, piece, isCapture);
+          return onMove(from, to, piece, isCapture, whiteTurnFen);
         }
         return true;
       }

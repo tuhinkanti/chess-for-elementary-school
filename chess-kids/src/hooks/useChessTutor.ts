@@ -12,6 +12,7 @@ interface UseChessTutorReturn {
     messages: ChatMessage[];
     sendMessage: (userMessage: string, context?: GameContext) => Promise<void>;
     startConversation: (context: GameContext) => Promise<void>;
+    encourageObjective: (objectiveDescription: string, isLessonComplete: boolean) => void;
     isLoading: boolean;
     clearChat: () => void;
     latestResponse: TutorResponse | null;
@@ -93,10 +94,42 @@ export const useChessTutor = (): UseChessTutorReturn => {
         setCurrentContext(null);
     }, []);
 
+    // Quick encouragement when an objective is completed (no API call)
+    const encourageObjective = useCallback((objectiveDescription: string, isLessonComplete: boolean) => {
+        const encouragements = isLessonComplete
+            ? [
+                "🎉 Fantastic! You completed the whole lesson!",
+                "🌟 Amazing work! You're becoming a chess master!",
+                "🏆 Incredible! You finished everything!",
+                "✨ Wow! You did it all! I'm so proud of you!"
+            ]
+            : [
+                `Great job completing: "${objectiveDescription}"! Keep going!`,
+                `Awesome! You nailed it! Ready for the next challenge?`,
+                `Wonderful! That's one goal down! You're doing great!`,
+                `Perfect! You got it! Let's keep the momentum going!`
+            ];
+
+        const randomMessage = encouragements[Math.floor(Math.random() * encouragements.length)];
+
+        const celebrationMessage: ChatMessage = {
+            role: 'assistant',
+            content: randomMessage,
+            mood: isLessonComplete ? 'celebrating' : 'encouraging'
+        };
+
+        setMessages(prev => [...prev, celebrationMessage]);
+        setLatestResponse({
+            message: randomMessage,
+            mood: isLessonComplete ? 'celebrating' : 'encouraging'
+        });
+    }, []);
+
     return {
         messages,
         sendMessage,
         startConversation,
+        encourageObjective,
         isLoading,
         clearChat,
         latestResponse
