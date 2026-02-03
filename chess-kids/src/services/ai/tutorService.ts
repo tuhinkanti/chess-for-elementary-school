@@ -9,6 +9,8 @@
  * Provider is selected via AI_PROVIDER environment variable on the server.
  */
 
+const MAX_MESSAGE_LENGTH = 500;
+
 interface TutorResponse {
     message: string;
     mood: "encouraging" | "thinking" | "surprised" | "celebrating";
@@ -39,7 +41,10 @@ class ChessTutorService {
 
         // Convert chat messages to API format
         const apiMessages = messages.length > 0
-            ? messages.map(m => ({ role: m.role, content: m.content }))
+            ? messages.map(m => ({
+                role: m.role,
+                content: m.content.substring(0, MAX_MESSAGE_LENGTH)
+              }))
             : [{ role: 'user' as const, content: 'Help me with this chess position!' }];
 
         try {
