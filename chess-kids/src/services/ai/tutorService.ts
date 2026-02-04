@@ -36,10 +36,14 @@ class ChessTutorService {
      */
     async chat(messages: ChatMessage[], context?: GameContext): Promise<TutorResponse> {
         const systemPrompt = this.constructSystemPrompt(context);
+        const MAX_MESSAGE_LENGTH = 500;
 
         // Convert chat messages to API format
         const apiMessages = messages.length > 0
-            ? messages.map(m => ({ role: m.role, content: m.content }))
+            ? messages.map(m => ({
+                role: m.role,
+                content: m.content.substring(0, MAX_MESSAGE_LENGTH)
+            }))
             : [{ role: 'user' as const, content: 'Help me with this chess position!' }];
 
         try {
