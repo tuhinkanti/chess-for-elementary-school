@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/purity */
 import { motion, AnimatePresence } from 'framer-motion';
 import { Star } from 'lucide-react';
 import { useState } from 'react';

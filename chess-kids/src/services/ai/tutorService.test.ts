@@ -1,29 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-
-const { generateContentMock } = vi.hoisted(() => ({
-    generateContentMock: vi.fn(),
-}));
-
-// Mock the Google Generative AI library
-vi.mock('@google/generative-ai', () => {
-    const getGenerativeModelMock = vi.fn(() => ({
-        generateContent: generateContentMock,
-    }));
-
-    return {
-        GoogleGenerativeAI: vi.fn(() => ({
-            getGenerativeModel: getGenerativeModelMock,
-        })),
-    };
-});
-
-// Import after mocking
-import { tutorService, GameContext } from './tutorService';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { tutorService, type GameContext } from './tutorService';
 
 describe('TutorService', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        // Mock global fetch
+        global.fetch = vi.fn();
     });
 
     it('constructs a prompt correctly with student context', async () => {
@@ -33,8 +15,8 @@ describe('TutorService', () => {
             studentContext: 'Student likes to play fast.',
         };
 
-        // Access private method for testing purpose or trigger via public method
-        const prompt = (tutorService as any).constructPrompt(context);
+        // Access private method for testing purpose
+        const prompt = (tutorService as any).constructSystemPrompt(context);
 
         expect(prompt).toContain('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1');
         expect(prompt).toContain('Learn to move pawns');
@@ -45,15 +27,12 @@ describe('TutorService', () => {
     it('returns advice from AI correctly', async () => {
         const mockAdvice = {
             message: 'Great job! Try moving your e-pawn forward.',
-            mood: 'encouraging',
-            highlightSquare: 'e4',
-            drawArrow: 'e2-e4',
+            mood: 'encouraging' as const,
         };
 
-        (generateContentMock as any).mockResolvedValue({
-            response: {
-                text: () => JSON.stringify(mockAdvice),
-            },
+        (global.fetch as any).mockResolvedValue({
+            ok: true,
+            json: async () => mockAdvice,
         });
 
         const context: GameContext = {
@@ -63,11 +42,11 @@ describe('TutorService', () => {
         const advice = await tutorService.getAdvice(context);
 
         expect(advice).toEqual(mockAdvice);
-        expect(generateContentMock).toHaveBeenCalledTimes(1);
+        expect(global.fetch).toHaveBeenCalledWith('/api/tutor', expect.anything());
     });
 
     it('handles AI errors gracefully with a fallback', async () => {
-        (generateContentMock as any).mockRejectedValue(new Error('API Failure'));
+        (global.fetch as any).mockRejectedValue(new Error('API Failure'));
 
         const context: GameContext = {
             fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
@@ -80,10 +59,9 @@ describe('TutorService', () => {
     });
 
     it('handles invalid JSON from AI gracefully', async () => {
-        (generateContentMock as any).mockResolvedValue({
-            response: {
-                text: () => 'Invalid JSON string',
-            },
+        (global.fetch as any).mockResolvedValue({
+            ok: true,
+            json: async () => { throw new Error('Invalid JSON'); },
         });
 
         const context: GameContext = {

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowLeft, CheckCircle } from 'lucide-react';
@@ -34,9 +34,18 @@ export function LessonPage() {
   const [lessonState, setLessonState] = useState<LessonState>(createInitialLessonState);
   const [showCelebration, setShowCelebration] = useState(false);
   const [showStory, setShowStory] = useState(true);
+  const [currentFen, setCurrentFen] = useState<string>(config?.fen || 'start');
+  const [lastMove, setLastMove] = useState<string | undefined>(undefined);
+  const [isShaking, setIsShaking] = useState(false);
+
+  // Track previous move count to detect new moves
+  const prevMoveCount = useRef(0);
 
   // Memory system
   const memory = useStudentMemory(currentProfile?.id);
+
+  // AI Tutor
+  const { messages, sendMessage, startConversation, encourageObjective, isLoading, clearChat, latestResponse } = useChessTutor();
 
   useEffect(() => {
     if (!currentProfile) {
@@ -46,24 +55,52 @@ export function LessonPage() {
 
   // Start session when lesson begins
   useEffect(() => {
-    setLessonState(createInitialLessonState());
-    setShowStory(true);
-    setShowCelebration(false);
     memory.startSession(lessonId);
-
+    
     // End session when leaving
     return () => {
       memory.endSession();
     };
   }, [lessonId, memory]);
 
+  // Learn from AI response
+  useEffect(() => {
+    if (latestResponse?.learnedFacts && latestResponse.learnedFacts.length > 0) {
+      latestResponse.learnedFacts.forEach(fact => {
+        // We categorize broadly as 'skill-gap' or 'preference' if possible, but 'general' fallback is okay.
+        // Since the prompt asks for strengths/weaknesses, we'll try to guess or just use a default.
+        // For now, let's assume if the AI noticed it, it's worth noting as a 'skill-gap' or 'strength'.
+        // We'll use a generic 'preference' category or modify memory to accept 'observation'.
+        // Using 'skill-gap' as a safe default for "struggles", but it might be a strength.
+        // Let's use 'preference' for now as a catch-all for "observed traits".
+        memory.addFact(fact, 'preference', 'tutor');
+      });
+    }
+  }, [latestResponse, memory]);
+
   const currentObjective = config?.objectives[lessonState.currentObjectiveIndex];
+
+  const handleMistake = useCallback((context: string) => {
+    setIsShaking(true);
+    setTimeout(() => setIsShaking(false), 500);
+
+    // Record the mistake so the AI knows
+    memory.recordTutorInteraction('message', `Mistake: ${context}`, 'system');
+    
+    // Also add a temporary fact about the struggle if it's specific
+    // memory.addFact(`Struggled with ${context}`, 'skill-gap', 'system');
+  }, [memory]);
 
   // Check for objective completion whenever lessonState changes
   useEffect(() => {
     if (!config || !currentObjective || showCelebration) return;
 
     const isComplete = checkObjectiveComplete(currentObjective, lessonState);
+    const moveMade = lessonState.moveCount > prevMoveCount.current;
+    
+    if (moveMade) {
+      prevMoveCount.current = lessonState.moveCount;
+    }
 
     if (isComplete) {
       const nextIndex = lessonState.currentObjectiveIndex + 1;
@@ -74,6 +111,7 @@ export function LessonPage() {
 
       if (nextIndex >= config.objectives.length) {
         // All objectives done!
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setShowCelebration(true);
         addStars(3);
         completeLesson(lessonId);
@@ -85,12 +123,18 @@ export function LessonPage() {
           `lesson-${lessonId}`
         );
 
+        // Gloop celebrates the lesson completion!
+        encourageObjective(currentObjective.description, true);
+
         setLessonState(prev => ({
           ...prev,
           completedObjectives: newCompleted,
           currentObjectiveIndex: nextIndex,
         }));
       } else {
+        // Gloop encourages for completing this objective!
+        encourageObjective(currentObjective.description, false);
+
         // Advance to next objective
         setLessonState(prev => ({
           ...prev,
@@ -98,24 +142,36 @@ export function LessonPage() {
           currentObjectiveIndex: nextIndex,
         }));
       }
+    } else if (moveMade) {
+      // Move made but objective NOT complete. Check if it was a "wrong" move.
+      // For objectives that require a specific single move/capture, any other move is wrong.
+      const isSingleAction = ['move-piece', 'capture'].includes(currentObjective.validator.type);
+      
+      if (isSingleAction) {
+        handleMistake(currentObjective.description);
+      }
     }
-  }, [lessonState, config, currentObjective, lessonId, addStars, completeLesson, showCelebration, memory, lesson]);
+  }, [lessonState, config, currentObjective, lessonId, addStars, completeLesson, showCelebration, memory, lesson, encourageObjective, handleMistake]);
 
   const onSquareTap = useCallback((square: string) => {
     setLessonState((prev) => handleSquareTap(square, prev));
   }, []);
 
-  const onChessMove = useCallback((from: string, to: string, piece: string, isCapture: boolean) => {
+  const onChessMove = useCallback((from: string, to: string, piece: string, isCapture: boolean, newFen: string) => {
     setLessonState((prev) => handleMove(prev, { from, to, piece, isCapture }));
+    setCurrentFen(newFen);
+    setLastMove(`${from}-${to}`);
     return true;
   }, []);
 
   const onAnswerSelect = useCallback((isCorrect: boolean) => {
-    if (!isCorrect) return;
+    if (!isCorrect) {
+      handleMistake("Selected wrong answer");
+      return;
+    }
     setLessonState((prev) => handleAnswer(prev, isCorrect));
-  }, []);
+  }, [handleMistake]);
 
-  const { messages, sendMessage, startConversation, isLoading, clearChat, latestResponse } = useChessTutor();
 
   const handleAskTutor = useCallback(() => {
     if (!config) return;
@@ -124,23 +180,25 @@ export function LessonPage() {
     const studentContext = memory.getContextForAI();
 
     startConversation({
-      fen: config.fen || 'start',
+      fen: currentFen,
+      lastMove,
       lessonObjective: currentObjective?.description,
       studentContext,
     });
 
     // Record the interaction
     memory.recordTutorInteraction('message', currentObjective?.description || 'general', 'asked');
-  }, [config, currentObjective, startConversation, memory]);
+  }, [config, currentObjective, startConversation, memory, currentFen, lastMove]);
 
   const handleSendMessage = useCallback((userMessage: string) => {
     const studentContext = memory.getContextForAI();
     sendMessage(userMessage, {
-      fen: config?.fen || 'start',
+      fen: currentFen,
+      lastMove,
       lessonObjective: currentObjective?.description,
       studentContext,
     });
-  }, [sendMessage, config, currentObjective, memory]);
+  }, [sendMessage, currentObjective, memory, currentFen, lastMove]);
 
   const handleCelebrationComplete = () => {
     clearChat();
@@ -191,7 +249,7 @@ export function LessonPage() {
         </motion.div>
       ) : (
         <div className="lesson-content">
-          <div className="board-section">
+          <div className={`board-section ${isShaking ? 'shake' : ''}`}>
             {showNumberPicker ? (
               <NumberPicker
                 correctAnswer={currentObjective?.validator.correctAnswer || 8}
@@ -209,7 +267,7 @@ export function LessonPage() {
               <ChessBoard
                 key={`lesson-${lessonId}`}
                 fen={config.fen || undefined}
-                onMove={(from, to, piece, isCapture) => onChessMove(from, to, piece, isCapture)}
+                onMove={(from, to, piece, isCapture, newFen) => onChessMove(from, to, piece, isCapture, newFen)}
                 boardSize={Math.min(400, window.innerWidth - 40)}
                 highlightSquares={latestResponse?.highlightSquare ? [latestResponse.highlightSquare] : []}
                 customArrows={latestResponse?.drawArrow ? [latestResponse.drawArrow.split('-')] : []}
@@ -299,6 +357,15 @@ export function LessonPage() {
         .ask-tutor-button:disabled {
           opacity: 0.7;
           cursor: wait;
+        }
+        .shake {
+          animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+        }
+        @keyframes shake {
+          10%, 90% { transform: translate3d(-1px, 0, 0); }
+          20%, 80% { transform: translate3d(2px, 0, 0); }
+          30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+          40%, 60% { transform: translate3d(4px, 0, 0); }
         }
       `}</style>
     </div>

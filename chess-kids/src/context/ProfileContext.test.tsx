@@ -1,4 +1,4 @@
-import { render, screen, act } from '@testing-library/react';
+import { render, act } from '@testing-library/react';
 import { ProfileProvider, useProfile } from './ProfileContext';
 import { describe, it, expect, beforeEach } from 'vitest';
 

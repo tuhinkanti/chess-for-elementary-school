@@ -1,10 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { memoryService } from './memoryService';
 
-// Mock localStorage
-const localStorageMock = (() => {
+vi.hoisted(() => {
     let store: Record<string, string> = {};
-    return {
+    const localStorageMock = {
         getItem: (key: string) => store[key] || null,
         setItem: (key: string, value: string) => {
             store[key] = value.toString();
@@ -16,11 +14,14 @@ const localStorageMock = (() => {
             delete store[key];
         },
     };
-})();
 
-Object.defineProperty(global, 'localStorage', {
-    value: localStorageMock,
+    Object.defineProperty(global, 'localStorage', {
+        value: localStorageMock,
+        writable: true
+    });
 });
+
+import { memoryService } from './memoryService';
 
 describe('MemoryService', () => {
     const profileId = 'test-student-123';
@@ -58,7 +59,7 @@ describe('MemoryService', () => {
     });
 
     it('accesses a fact and increments counter', () => {
-        const fact = memoryService.addFact(profileId, 'Testing access', 'insight', 'test');
+        const fact = memoryService.addFact(profileId, 'Testing access', 'milestone', 'test');
         memoryService.accessFact(profileId, fact.id);
 
         const facts = memoryService.getStudentFacts(profileId).facts;
@@ -107,7 +108,7 @@ describe('MemoryService', () => {
     it('handles fact decay (mocking time)', () => {
         vi.useFakeTimers();
 
-        const fact = memoryService.addFact(profileId, 'Old fact', 'insight', 'test');
+        const fact = memoryService.addFact(profileId, 'Old fact', 'milestone', 'test');
 
         // Advance time by 40 days (Cold tier is > 30 days)
         const fortyDaysInMs = 40 * 24 * 60 * 60 * 1000;

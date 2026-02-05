@@ -4,7 +4,7 @@ import { Chess, type Square } from 'chess.js';
 
 interface ChessBoardProps {
   fen?: string;
-  onMove?: (from: string, to: string, piece: string, isCapture: boolean) => boolean;
+  onMove?: (from: string, to: string, piece: string, isCapture: boolean, newFen: string) => boolean;
   highlightSquares?: string[];
   customArrows?: string[][]; // Format: [['e2', 'e4']]
   interactive?: boolean;
@@ -22,14 +22,18 @@ export function ChessBoard({
   boardSize = 400,
 }: ChessBoardProps) {
   const [game, setGame] = useState(() => new Chess(fen));
-  const [prevFen, setPrevFen] = useState(fen);
 
+  const [selectedSquare, setSelectedSquare] = useState<string | null>(null);
+  const [moveSquares, setMoveSquares] = useState<Record<string, React.CSSProperties>>({});
+
+  // Derived state to handle fen prop changes
+  const [prevFen, setPrevFen] = useState(fen);
   if (fen !== prevFen) {
     setPrevFen(fen);
     setGame(new Chess(fen));
+    setSelectedSquare(null);
+    setMoveSquares({});
   }
-
-  const [selectedSquare, setSelectedSquare] = useState<string | null>(null);
 
   const getMoveOptions = (square: Square) => {
     const moves = game.moves({ square, verbose: true });
@@ -47,8 +51,6 @@ export function ChessBoard({
 
     return highlights;
   };
-
-  const [moveSquares, setMoveSquares] = useState<Record<string, React.CSSProperties>>({});
 
   const handleSquareClick = ({ square }: SquareHandlerArgs) => {
     if (!interactive) return;
@@ -72,15 +74,14 @@ export function ChessBoard({
   const handleMove = (from: string, to: string) => {
     try {
       const piece = game.get(from as Square)?.type || '';
-      const targetPiece = game.get(to as Square);
-      const isCapture = targetPiece !== null;
 
       const move = game.move({ from, to, promotion: 'q' });
+      const isCapture = !!move?.captured; // Check capture flag from move result
       if (move) {
         const whiteTurnFen = game.fen().replace(/ [bw] /, ' w ');
         setGame(new Chess(whiteTurnFen));
         if (onMove) {
-          return onMove(from, to, piece, isCapture);
+          return onMove(from, to, piece, isCapture, whiteTurnFen);
         }
         return true;
       }

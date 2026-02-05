@@ -1,0 +1,11 @@
+#!/bin/sh
+echo "🔍 Running Gemini Code Review..."
+gemini --yolo --prompt "Review the staged changes. If you find critical issues or bugs, FIX them by rewriting the files using the 'write_file' tool. Focus on high severity issues." || exit 1
+
+echo "🔍 Running Lint..."
+npm run lint || exit 1
+
+echo "🧪 Running Tests..."
+npm run test:run || exit 1
+
+echo "✅ All checks passed!"
