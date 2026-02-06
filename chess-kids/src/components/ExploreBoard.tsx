@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion';
 import { CORNER_SQUARES } from '../data/lessonEngine';
+import { BOARD_COLORS } from '../constants/colors';
 
 interface ExploreBoardProps {
   tappedSquares: Set<string>;
@@ -30,7 +31,7 @@ export function ExploreBoard({
     const isCorner = CORNER_SQUARES.includes(square);
     const cornerTapped = tappedCorners.has(square);
 
-    const baseColor = isLight ? '#f0f1d8' : '#88a65e';
+    const baseColor = isLight ? BOARD_COLORS.light : BOARD_COLORS.dark;
     const tappedColor = isLight ? '#fff59d' : '#cbd86a';
 
     let background = isTapped ? tappedColor : baseColor;

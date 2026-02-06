@@ -5,7 +5,7 @@ describe('TutorService', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         // Mock global fetch
-        global.fetch = vi.fn();
+        vi.stubGlobal('fetch', vi.fn());
     });
 
     it('constructs a prompt correctly with student context', async () => {
@@ -15,8 +15,18 @@ describe('TutorService', () => {
             studentContext: 'Student likes to play fast.',
         };
 
-        // Access private method for testing purpose
-        const prompt = (tutorService as any).constructSystemPrompt(context);
+        // Mock success response so we can inspect the call
+        (fetch as any).mockResolvedValue({
+            ok: true,
+            json: async () => ({ message: 'ok', mood: 'thinking' }),
+        });
+
+        await tutorService.getAdvice(context);
+
+        expect(fetch).toHaveBeenCalled();
+        const callArgs = (fetch as any).mock.calls[0];
+        const body = JSON.parse(callArgs[1].body);
+        const prompt = body.systemPrompt;
 
         expect(prompt).toContain('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1');
         expect(prompt).toContain('Learn to move pawns');
@@ -30,7 +40,7 @@ describe('TutorService', () => {
             mood: 'encouraging' as const,
         };
 
-        (global.fetch as any).mockResolvedValue({
+        (fetch as any).mockResolvedValue({
             ok: true,
             json: async () => mockAdvice,
         });
@@ -42,11 +52,11 @@ describe('TutorService', () => {
         const advice = await tutorService.getAdvice(context);
 
         expect(advice).toEqual(mockAdvice);
-        expect(global.fetch).toHaveBeenCalledWith('/api/tutor', expect.anything());
+        expect(fetch).toHaveBeenCalledWith('/api/tutor', expect.anything());
     });
 
     it('handles AI errors gracefully with a fallback', async () => {
-        (global.fetch as any).mockRejectedValue(new Error('API Failure'));
+        (fetch as any).mockRejectedValue(new Error('API Failure'));
 
         const context: GameContext = {
             fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
@@ -59,7 +69,7 @@ describe('TutorService', () => {
     });
 
     it('handles invalid JSON from AI gracefully', async () => {
-        (global.fetch as any).mockResolvedValue({
+        (fetch as any).mockResolvedValue({
             ok: true,
             json: async () => { throw new Error('Invalid JSON'); },
         });
