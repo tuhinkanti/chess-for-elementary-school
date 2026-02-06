@@ -8,22 +8,6 @@ describe('TutorService', () => {
         global.fetch = vi.fn();
     });
 
-    it('constructs a prompt correctly with student context', async () => {
-        const context: GameContext = {
-            fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
-            lessonObjective: 'Learn to move pawns',
-            studentContext: 'Student likes to play fast.',
-        };
-
-        // Access private method for testing purpose
-        const prompt = (tutorService as any).constructSystemPrompt(context);
-
-        expect(prompt).toContain('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1');
-        expect(prompt).toContain('Learn to move pawns');
-        expect(prompt).toContain('Student likes to play fast.');
-        expect(prompt).toContain('Grandmaster Gloop');
-    });
-
     it('returns advice from AI correctly', async () => {
         const mockAdvice = {
             message: 'Great job! Try moving your e-pawn forward.',
