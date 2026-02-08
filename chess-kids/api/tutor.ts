@@ -4,6 +4,7 @@ import { generateText } from 'ai';
 import { createOpenAI } from '@ai-sdk/openai';
 import { google } from '@ai-sdk/google';
 import { anthropic } from '@ai-sdk/anthropic';
+import { extractJson, validateTutorRequest } from '../src/utils/aiUtils.js';
 
 const provider = process.env.AI_PROVIDER || 'local';
 
@@ -14,7 +15,7 @@ interface ChatMessage {
 
 function getModel() {
     switch (provider) {
-        case 'local':
+        case 'local': {
             // LM Studio runs on port 1234 by default with OpenAI-compatible API
             const lmStudio = createOpenAI({
                 baseURL: 'http://localhost:1234/v1',
@@ -22,6 +23,7 @@ function getModel() {
             });
             // Use .chat() to ensure chat completions endpoint is used
             return lmStudio.chat('qwen3-30b-a3b-2507');
+        }
         case 'claude':
             return anthropic('claude-sonnet-4-20250514');
         case 'gemini':
@@ -36,14 +38,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     try {
+        const validation = validateTutorRequest(req.body);
+        if (!validation.valid) {
+            return res.status(400).json({ error: validation.error });
+        }
+
         const { messages, systemPrompt } = req.body as {
-            messages?: ChatMessage[];
+            messages: ChatMessage[];
             systemPrompt?: string;
         };
-
-        if (!messages || messages.length === 0) {
-            return res.status(400).json({ error: 'Messages are required' });
-        }
 
         // Build the full prompt with system context and conversation history
         const systemMessage = systemPrompt || `You are Grandmaster Gloop, a friendly chess tutor for a 7-year-old.
@@ -61,17 +64,17 @@ Always respond with valid JSON: {"message": "your response", "mood": "encouragin
         });
 
         // Try to parse as JSON (for structured TutorResponse)
-        try {
-            const parsed = JSON.parse(text);
+        const parsed = extractJson(text);
+        if (parsed) {
             return res.status(200).json(parsed);
-        } catch {
-            // If not valid JSON, wrap the text in a TutorResponse structure
-            return res.status(200).json({
-                message: text,
-                mood: 'encouraging'
-            });
         }
-    } catch (error: any) {
+
+        // If not valid JSON, wrap the text in a TutorResponse structure
+        return res.status(200).json({
+            message: text,
+            mood: 'encouraging'
+        });
+    } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
         console.error('AI Tutor API Error:', error);
 
         // Handle quota/rate limit errors
