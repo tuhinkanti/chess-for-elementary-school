@@ -1,12 +1,12 @@
-import { useState, useMemo } from 'react';
-import { Chessboard, type SquareHandlerArgs, type PieceDropHandlerArgs } from 'react-chessboard';
+import { useState, useMemo, useEffect } from 'react';
+import { Chessboard, type SquareHandlerArgs, type PieceDropHandlerArgs, type Arrow } from 'react-chessboard';
 import { Chess, type Square } from 'chess.js';
 
 interface ChessBoardProps {
   fen?: string;
   onMove?: (from: string, to: string, piece: string, isCapture: boolean, newFen: string) => boolean;
   highlightSquares?: string[];
-  customArrows?: string[][]; // Format: [['e2', 'e4']]
+  customArrows?: [string, string][]; // Format: [['e2', 'e4']]
   interactive?: boolean;
   boardSize?: number;
 }
@@ -26,14 +26,12 @@ export function ChessBoard({
   const [selectedSquare, setSelectedSquare] = useState<string | null>(null);
   const [moveSquares, setMoveSquares] = useState<Record<string, React.CSSProperties>>({});
 
-  // Derived state to handle fen prop changes
-  const [prevFen, setPrevFen] = useState(fen);
-  if (fen !== prevFen) {
-    setPrevFen(fen);
+  // Sync game state with fen prop
+  useEffect(() => {
     setGame(new Chess(fen));
     setSelectedSquare(null);
     setMoveSquares({});
-  }
+  }, [fen]);
 
   const getMoveOptions = (square: Square) => {
     const moves = game.moves({ square, verbose: true });
@@ -78,10 +76,11 @@ export function ChessBoard({
       const move = game.move({ from, to, promotion: 'q' });
       const isCapture = !!move?.captured; // Check capture flag from move result
       if (move) {
-        const whiteTurnFen = game.fen().replace(/ [bw] /, ' w ');
-        setGame(new Chess(whiteTurnFen));
+        const newFen = game.fen();
+        // Update local state to reflect the move immediately
+        setGame(new Chess(newFen));
         if (onMove) {
-          return onMove(from, to, piece, isCapture, whiteTurnFen);
+          return onMove(from, to, piece, isCapture, newFen);
         }
         return true;
       }
@@ -120,6 +119,14 @@ export function ChessBoard({
     return styles;
   }, [moveSquares, selectedSquare, highlightSquares]);
 
+  const arrows = useMemo(() => {
+    return customArrows.map(([start, end]) => ({
+      startSquare: start,
+      endSquare: end,
+      color: 'rgba(255, 170, 0, 0.8)', // Orange-ish
+    } as Arrow));
+  }, [customArrows]);
+
   return (
     <div className="chess-board-container" style={{ width: boardSize, height: boardSize }}>
       <Chessboard
@@ -128,14 +135,14 @@ export function ChessBoard({
           onPieceDrop: onDrop,
           onSquareClick: handleSquareClick,
           squareStyles: customSquareStyles,
-          customArrows: customArrows as any, // AI Hints
+          arrows: arrows,
           boardStyle: {
             borderRadius: '8px',
             boxShadow: '0 8px 24px rgba(0, 0, 0, 0.3)',
           },
           darkSquareStyle: { backgroundColor: '#779952' },
           lightSquareStyle: { backgroundColor: '#edeed1' },
-        } as any}
+        }}
       />
     </div>
   );

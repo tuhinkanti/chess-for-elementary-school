@@ -4,13 +4,23 @@ import { generateText } from 'ai';
 import { createOpenAI } from '@ai-sdk/openai';
 import { google } from '@ai-sdk/google';
 import { anthropic } from '@ai-sdk/anthropic';
+import { z } from 'zod';
 
 const provider = process.env.AI_PROVIDER || 'local';
 
-interface ChatMessage {
-    role: 'user' | 'assistant' | 'system';
-    content: string;
-}
+const MODELS = {
+    LOCAL: 'qwen3-30b-a3b-2507',
+    CLAUDE: 'claude-sonnet-4-20250514',
+    GEMINI: 'gemini-2.0-flash'
+};
+
+const RequestSchema = z.object({
+    messages: z.array(z.object({
+        role: z.enum(['user', 'assistant', 'system']),
+        content: z.string()
+    })).min(1),
+    systemPrompt: z.string().optional()
+});
 
 function getModel() {
     switch (provider) {
@@ -21,13 +31,18 @@ function getModel() {
                 apiKey: 'lm-studio' // LM Studio doesn't require a real key
             });
             // Use .chat() to ensure chat completions endpoint is used
-            return lmStudio.chat('qwen3-30b-a3b-2507');
+            return lmStudio.chat(MODELS.LOCAL);
         case 'claude':
-            return anthropic('claude-sonnet-4-20250514');
+            return anthropic(MODELS.CLAUDE);
         case 'gemini':
         default:
-            return google('gemini-2.0-flash');
+            return google(MODELS.GEMINI);
     }
+}
+
+function extractJSON(text: string): string {
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    return jsonMatch ? jsonMatch[0] : text;
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -36,14 +51,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     try {
-        const { messages, systemPrompt } = req.body as {
-            messages?: ChatMessage[];
-            systemPrompt?: string;
-        };
+        const parseResult = RequestSchema.safeParse(req.body);
 
-        if (!messages || messages.length === 0) {
-            return res.status(400).json({ error: 'Messages are required' });
+        if (!parseResult.success) {
+            return res.status(400).json({ error: 'Invalid request body', details: parseResult.error });
         }
+
+        const { messages, systemPrompt } = parseResult.data;
 
         // Build the full prompt with system context and conversation history
         const systemMessage = systemPrompt || `You are Grandmaster Gloop, a friendly chess tutor for a 7-year-old.
@@ -52,7 +66,7 @@ Always respond with valid JSON: {"message": "your response", "mood": "encouragin
 
         const fullMessages = [
             { role: 'system' as const, content: systemMessage },
-            ...messages
+            ...messages.map(m => ({ role: m.role as 'user' | 'assistant' | 'system', content: m.content }))
         ];
 
         const { text } = await generateText({
@@ -62,7 +76,8 @@ Always respond with valid JSON: {"message": "your response", "mood": "encouragin
 
         // Try to parse as JSON (for structured TutorResponse)
         try {
-            const parsed = JSON.parse(text);
+            const cleanedText = extractJSON(text);
+            const parsed = JSON.parse(cleanedText);
             return res.status(200).json(parsed);
         } catch {
             // If not valid JSON, wrap the text in a TutorResponse structure
