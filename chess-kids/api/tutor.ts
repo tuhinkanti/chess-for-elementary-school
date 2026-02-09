@@ -4,30 +4,94 @@ import { generateText } from 'ai';
 import { createOpenAI } from '@ai-sdk/openai';
 import { google } from '@ai-sdk/google';
 import { anthropic } from '@ai-sdk/anthropic';
+import { z } from 'zod';
 
 const provider = process.env.AI_PROVIDER || 'local';
 
-interface ChatMessage {
-    role: 'user' | 'assistant' | 'system';
-    content: string;
-}
+// Configuration
+const MODELS = {
+    local: {
+        model: 'qwen3-30b-a3b-2507',
+        baseURL: 'http://localhost:1234/v1',
+        apiKey: 'lm-studio'
+    },
+    claude: 'claude-sonnet-4-20250514',
+    gemini: 'gemini-2.0-flash'
+};
+
+const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
+const MAX_REQUESTS = 20; // Allow 20 requests per minute per IP
+const rateLimitMap = new Map<string, { count: number, startTime: number }>();
+
+// Schema Definitions
+const ChatMessageSchema = z.object({
+    role: z.enum(['user', 'assistant', 'system']),
+    content: z.string(),
+});
+
+const RequestBodySchema = z.object({
+    messages: z.array(ChatMessageSchema),
+    systemPrompt: z.string().optional(),
+});
+
+const TutorResponseSchema = z.object({
+    message: z.string(),
+    mood: z.enum(['encouraging', 'thinking', 'surprised', 'celebrating']),
+    highlightSquare: z.string().optional(),
+    drawArrow: z.string().optional(),
+    learnedFacts: z.array(z.string()).optional(),
+});
 
 function getModel() {
     switch (provider) {
         case 'local':
             // LM Studio runs on port 1234 by default with OpenAI-compatible API
             const lmStudio = createOpenAI({
-                baseURL: 'http://localhost:1234/v1',
-                apiKey: 'lm-studio' // LM Studio doesn't require a real key
+                baseURL: MODELS.local.baseURL,
+                apiKey: MODELS.local.apiKey
             });
             // Use .chat() to ensure chat completions endpoint is used
-            return lmStudio.chat('qwen3-30b-a3b-2507');
+            return lmStudio.chat(MODELS.local.model);
         case 'claude':
-            return anthropic('claude-sonnet-4-20250514');
+            return anthropic(MODELS.claude);
         case 'gemini':
         default:
-            return google('gemini-2.0-flash');
+            return google(MODELS.gemini);
     }
+}
+
+function extractJson(text: string): any {
+    try {
+        const jsonMatch = text.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+            return JSON.parse(jsonMatch[0]);
+        }
+        return JSON.parse(text); // Fallback to direct parse
+    } catch (e) {
+        throw new Error('Failed to extract JSON from response');
+    }
+}
+
+function checkRateLimit(ip: string): boolean {
+    const now = Date.now();
+    const record = rateLimitMap.get(ip);
+
+    if (!record) {
+        rateLimitMap.set(ip, { count: 1, startTime: now });
+        return true;
+    }
+
+    if (now - record.startTime > RATE_LIMIT_WINDOW) {
+        rateLimitMap.set(ip, { count: 1, startTime: now });
+        return true;
+    }
+
+    if (record.count >= MAX_REQUESTS) {
+        return false;
+    }
+
+    record.count++;
+    return true;
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -35,11 +99,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(405).json({ error: 'Method not allowed' });
     }
 
+    const ip = (Array.isArray(req.headers['x-forwarded-for'])
+        ? req.headers['x-forwarded-for'][0]
+        : req.headers['x-forwarded-for']) || req.socket.remoteAddress || 'unknown';
+
+    if (!checkRateLimit(ip)) {
+        console.warn(`[Rate Limit] Blocked request from ${ip}`);
+        return res.status(429).json({ error: 'Too many requests. Please try again later.' });
+    }
+
     try {
-        const { messages, systemPrompt } = req.body as {
-            messages?: ChatMessage[];
-            systemPrompt?: string;
-        };
+        // Validate request body
+        const result = RequestBodySchema.safeParse(req.body);
+
+        if (!result.success) {
+            return res.status(400).json({ error: 'Invalid request body', details: result.error.format() });
+        }
+
+        const { messages, systemPrompt } = result.data;
 
         if (!messages || messages.length === 0) {
             return res.status(400).json({ error: 'Messages are required' });
@@ -62,17 +139,22 @@ Always respond with valid JSON: {"message": "your response", "mood": "encouragin
 
         // Try to parse as JSON (for structured TutorResponse)
         try {
-            const parsed = JSON.parse(text);
-            return res.status(200).json(parsed);
-        } catch {
-            // If not valid JSON, wrap the text in a TutorResponse structure
+            const parsed = extractJson(text);
+            const validatedResponse = TutorResponseSchema.parse(parsed);
+            return res.status(200).json(validatedResponse);
+        } catch (parseError) {
+            // If not valid JSON or validation fails, wrap the text in a TutorResponse structure
             return res.status(200).json({
                 message: text,
                 mood: 'encouraging'
             });
         }
     } catch (error: any) {
-        console.error('AI Tutor API Error:', error);
+        console.error(`[AI Tutor Error] Provider: ${provider}`, {
+            message: error.message,
+            stack: error.stack,
+            response: error.response?.data
+        });
 
         // Handle quota/rate limit errors
         if (error?.message?.includes('429') || error?.message?.includes('quota')) {
@@ -82,10 +164,9 @@ Always respond with valid JSON: {"message": "your response", "mood": "encouragin
             });
         }
 
-        return res.status(200).json({
+        return res.status(500).json({
             message: "I'm having a little trouble thinking right now, but keep trying!",
             mood: 'thinking'
         });
     }
 }
-// Trigger review

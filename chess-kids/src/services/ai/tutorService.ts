@@ -9,6 +9,8 @@
  * Provider is selected via AI_PROVIDER environment variable on the server.
  */
 
+import { z } from 'zod';
+
 interface TutorResponse {
     message: string;
     mood: "encouraging" | "thinking" | "surprised" | "celebrating";
@@ -29,8 +31,16 @@ interface ChatMessage {
     content: string;
 }
 
+const TutorResponseSchema = z.object({
+    message: z.string(),
+    mood: z.enum(['encouraging', 'thinking', 'surprised', 'celebrating']),
+    highlightSquare: z.string().optional(),
+    drawArrow: z.string().optional(),
+    learnedFacts: z.array(z.string()).optional(),
+});
+
 class ChessTutorService {
-    private apiEndpoint = '/api/tutor';
+    private apiEndpoint = import.meta.env.VITE_API_ENDPOINT || '/api/tutor';
 
     /**
      * Chat with Gloop - supports multi-turn conversations
@@ -60,7 +70,8 @@ class ChessTutorService {
             }
 
             const data = await response.json();
-            return data as TutorResponse;
+            // Validate response with Zod
+            return TutorResponseSchema.parse(data) as TutorResponse;
         } catch (error: any) {
             console.error("AI Tutor Error:", error);
 
@@ -79,8 +90,9 @@ class ChessTutorService {
     }
 
     private constructSystemPrompt(context?: GameContext): string {
+        // Truncate student context to avoid token limits (approx 1000 chars)
         const studentInfo = context?.studentContext
-            ? `\n## What You Know About This Student\n${context.studentContext}\n`
+            ? `\n## What You Know About This Student\n${context.studentContext.slice(0, 1000)}\n`
             : '';
 
         const boardInfo = context?.fen
