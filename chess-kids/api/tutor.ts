@@ -12,6 +12,16 @@ interface ChatMessage {
     content: string;
 }
 
+function isValidMessage(msg: any): msg is ChatMessage {
+    if (typeof msg !== 'object' || msg === null) return false;
+    const { role, content } = msg;
+    const validRoles = ['user', 'assistant', 'system'];
+    return (
+        validRoles.includes(role) &&
+        typeof content === 'string'
+    );
+}
+
 function getModel() {
     switch (provider) {
         case 'local':
@@ -41,8 +51,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             systemPrompt?: string;
         };
 
-        if (!messages || messages.length === 0) {
-            return res.status(400).json({ error: 'Messages are required' });
+        if (!messages || !Array.isArray(messages) || messages.length === 0) {
+            return res.status(400).json({ error: 'Messages are required and must be an array' });
+        }
+
+        if (!messages.every(isValidMessage)) {
+            return res.status(400).json({ error: 'Invalid message format. Each message must have a valid role and string content.' });
+        }
+
+        if (systemPrompt && typeof systemPrompt !== 'string') {
+            return res.status(400).json({ error: 'Invalid systemPrompt format. Must be a string.' });
         }
 
         // Build the full prompt with system context and conversation history
