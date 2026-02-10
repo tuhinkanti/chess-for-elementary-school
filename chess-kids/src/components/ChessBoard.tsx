@@ -9,6 +9,7 @@ interface ChessBoardProps {
   customArrows?: string[][]; // Format: [['e2', 'e4']]
   interactive?: boolean;
   boardSize?: number;
+  allowBlackMoves?: boolean;
 }
 
 const EMPTY_HIGHLIGHTS: string[] = [];
@@ -20,6 +21,7 @@ export function ChessBoard({
   customArrows = [],
   interactive = true,
   boardSize = 400,
+  allowBlackMoves = false,
 }: ChessBoardProps) {
   const [game, setGame] = useState(() => new Chess(fen));
 
@@ -78,10 +80,20 @@ export function ChessBoard({
       const move = game.move({ from, to, promotion: 'q' });
       const isCapture = !!move?.captured; // Check capture flag from move result
       if (move) {
-        const whiteTurnFen = game.fen().replace(/ [bw] /, ' w ');
-        setGame(new Chess(whiteTurnFen));
+        let newFen = game.fen();
+
+        if (!allowBlackMoves) {
+          // Force it to remain white's turn if black moves are not allowed
+          // This creates a "training mode" feel where pieces don't fight back
+          newFen = newFen.replace(/ [bw] /, ' w ');
+          setGame(new Chess(newFen));
+        } else {
+          // Normal game flow - just update the state to trigger re-render
+          setGame(new Chess(newFen));
+        }
+
         if (onMove) {
-          return onMove(from, to, piece, isCapture, whiteTurnFen);
+          return onMove(from, to, piece, isCapture, newFen);
         }
         return true;
       }
@@ -123,19 +135,19 @@ export function ChessBoard({
   return (
     <div className="chess-board-container" style={{ width: boardSize, height: boardSize }}>
       <Chessboard
-        options={{
-          position: game.fen(),
-          onPieceDrop: onDrop,
-          onSquareClick: handleSquareClick,
-          squareStyles: customSquareStyles,
-          customArrows: customArrows as any, // AI Hints
-          boardStyle: {
-            borderRadius: '8px',
-            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.3)',
-          },
-          darkSquareStyle: { backgroundColor: '#779952' },
-          lightSquareStyle: { backgroundColor: '#edeed1' },
-        } as any}
+        position={game.fen()}
+        onPieceDrop={onDrop}
+        onSquareClick={handleSquareClick}
+        customSquareStyles={customSquareStyles}
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        customArrows={customArrows as any}
+        boardWidth={boardSize}
+        customBoardStyle={{
+          borderRadius: '8px',
+          boxShadow: '0 8px 24px rgba(0, 0, 0, 0.3)',
+        }}
+        customDarkSquareStyle={{ backgroundColor: '#779952' }}
+        customLightSquareStyle={{ backgroundColor: '#edeed1' }}
       />
     </div>
   );

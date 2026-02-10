@@ -1,5 +1,6 @@
 export interface Lesson {
   id: number;
+  chapter: string;
   title: string;
   icon: string;
   description: string;
@@ -10,140 +11,201 @@ export interface Lesson {
 }
 
 export const lessons: Lesson[] = [
+  // CHAPTER 1: Meet Your Army
   {
     id: 1,
-    title: "The Chess Kingdom",
-    icon: "🏰",
-    description: "Meet the board and the pieces' homes",
-    storyIntro: "Welcome to the Chess Kingdom! Every piece has its own special home on this magical grid. See the numbers and letters? They help the Rook, Knight, and Bishop find their way back home! Let's explore the board where all the pieces live.",
+    chapter: "Chapter 1: Meet Your Army",
+    title: "The King",
+    icon: "👑",
+    piece: "k",
+    description: "The Most Important Coward",
+    storyIntro: "Meet the King! He is the most important piece, but he's also a bit of a coward. He only takes one tiny step at a time because his crown is too heavy! If he gets trapped, the game is over. Keep him safe!",
     objectives: [
-      "Tap 5 squares where pieces could live",
-      "Find the 4 corner homes (Rooks live here!)",
-      "Count the squares in the bottom row"
+      "Move the King one step",
+      "Don't let him get captured",
+      "Keep the King safe"
     ],
     unlockStars: 0
   },
   {
     id: 2,
-    title: "The Brave Pawn",
-    icon: "♟️",
-    piece: "p",
-    description: "Learn how the little pawn moves",
-    storyIntro: "Pawns are brave little soldiers! They always march forward, one step at a time. On their first move, they can take TWO big steps!",
+    chapter: "Chapter 1: Meet Your Army",
+    title: "The Queen",
+    icon: "👸",
+    piece: "q",
+    description: "The Superhero",
+    storyIntro: "The Queen is the strongest piece! She's a Superhero who can move as far as she wants in any direction—straight or diagonal. She protects the King because mommies always know best!",
     objectives: [
-      "Move a pawn forward 1 square",
-      "Try a 'Big Step'! Move a pawn 2 squares",
-      "Great! Make any move to finish"
+      "Move like a Rook (Straight)",
+      "Move like a Bishop (Diagonal)",
+      "Capture a piece"
     ],
     unlockStars: 3
   },
   {
     id: 3,
-    title: "The Jumping Knight",
-    icon: "🏇",
-    piece: "n",
-    description: "The horse that jumps in an L shape",
-    storyIntro: "The Knight is a magical horse! It jumps in an L-shape and can hop over other pieces. It's the only piece that can jump!",
+    chapter: "Chapter 1: Meet Your Army",
+    title: "The Rooks",
+    icon: "🏰",
+    piece: "r",
+    description: "The Castle Towers",
+    storyIntro: "Rooks look like castle towers. They are strong guards that slide in straight lines—up, down, left, or right. Imagine a train on tracks!",
     objectives: [
-      "Move the knight in an L-shape",
-      "Jump over other pieces",
-      "Capture a piece with the knight"
+      "Move in a straight line",
+      "Slide across the board",
+      "Capture a piece"
     ],
     unlockStars: 6
   },
   {
     id: 4,
-    title: "The Tower Rook",
-    icon: "🏰",
-    piece: "r",
-    description: "The castle that slides straight",
-    storyIntro: "The Rook is like a strong castle tower! It moves in straight lines - up, down, left, or right - as far as it wants!",
+    chapter: "Chapter 1: Meet Your Army",
+    title: "The Bishops",
+    icon: "⛪",
+    piece: "b",
+    description: "The Diagonal Runners",
+    storyIntro: "Bishops wear pointy hats, so they move pointy (diagonally)! They zoom across the board in an X shape. A Bishop stays on its starting color forever!",
     objectives: [
-      "Move the rook horizontally",
-      "Move the rook vertically",
-      "Capture a piece with the rook"
+      "Move diagonally",
+      "Stay on your color",
+      "Capture a piece"
     ],
     unlockStars: 9
   },
   {
     id: 5,
-    title: "The Sneaky Bishop",
-    icon: "⛪",
-    piece: "b",
-    description: "The piece that slides diagonally",
-    storyIntro: "The Bishop wears a pointy hat and loves diagonals! It zooms across the board on diagonal paths. Each bishop stays on its own color forever!",
+    chapter: "Chapter 1: Meet Your Army",
+    title: "The Knights",
+    icon: "🐴",
+    piece: "n",
+    description: "The Jumping Horses",
+    storyIntro: "Knights are magical horses that can JUMP over other pieces! They move in an L-shape: 2 steps one way, then 1 step the other way. Hop, hop, hooray!",
     objectives: [
-      "Move the bishop diagonally",
-      "Notice it stays on one color",
-      "Capture a piece with the bishop"
+      "Jump in an L-shape",
+      "Hop over a piece",
+      "Capture a pawn"
     ],
     unlockStars: 12
   },
   {
     id: 6,
-    title: "The Powerful Queen",
-    icon: "👸",
-    piece: "q",
-    description: "The strongest piece on the board",
-    storyIntro: "The Queen is the most powerful piece! She can move like a Rook AND a Bishop - straight lines and diagonals! Protect her well!",
+    chapter: "Chapter 1: Meet Your Army",
+    title: "The Pawns",
+    icon: "👶",
+    piece: "p",
+    description: "The Brave Little Soldiers",
+    storyIntro: "Pawns are brave little soldiers that form a wall. They only move forward! On their first turn, they can run 2 steps. After that, only 1 step. But watch out—they capture diagonally!",
     objectives: [
-      "Move the queen in a straight line",
-      "Move the queen diagonally",
-      "Capture pieces with the queen"
+      "Move forward 1 step",
+      "Run forward 2 steps",
+      "Capture diagonally"
     ],
     unlockStars: 15
   },
+
+  // CHAPTER 2: Setting Up the Battle
   {
     id: 7,
-    title: "Protect the King",
-    icon: "🤴",
-    piece: "k",
-    description: "Keep your King safe!",
-    storyIntro: "The King is the most important piece! If he's trapped, you lose! He can only move one square at a time, so keep him safe!",
+    chapter: "Chapter 2: Setting Up the Battle",
+    title: "Ready for Battle",
+    icon: "⚔️",
+    description: "Queens on their own color!",
+    storyIntro: "Time to set up the battlefield! Remember the Magic Sentence: 'Queens on their own color!' Rooks go in corners, Knights next to them, then Bishops. The King and Queen go in the middle.",
     objectives: [
-      "Move the king one square",
-      "Keep the king away from danger",
-      "Understand what 'check' means"
+      "Find the Rooks' corners",
+      "Find the Queen's home",
+      "Check: Light is Right!"
     ],
     unlockStars: 18
   },
+
+  // CHAPTER 3: How to Win
   {
     id: 8,
-    title: "Capture Time!",
-    icon: "⚔️",
-    description: "Practice capturing enemy pieces",
-    storyIntro: "Now you know all the pieces! Let's practice capturing. When your piece lands on an enemy's square, you capture it!",
+    chapter: "Chapter 3: How to Win",
+    title: "Checkmate!",
+    icon: "🎯",
+    description: "Trap the Enemy King",
+    storyIntro: "The goal is to trap the enemy King! 'Check' means 'Watch out!' 'Checkmate' means 'Game Over!' The King is trapped and has nowhere to run.",
     objectives: [
-      "Capture 5 pawns",
-      "Capture using different pieces",
-      "Avoid getting captured"
+      "Put the King in Check",
+      "Find a Checkmate",
+      "Win the game!"
     ],
     unlockStars: 21
   },
+
+  // CHAPTER 4: Special Super Moves
   {
     id: 9,
-    title: "Checkmate!",
-    icon: "🎯",
-    description: "Learn to trap the King",
-    storyIntro: "Checkmate means the King is trapped and can't escape! When you checkmate, you win the game! Let's practice simple checkmates!",
+    chapter: "Chapter 4: Special Super Moves",
+    title: "Castling",
+    icon: "🏃",
+    description: "The King's Escape Tunnel",
+    storyIntro: "Castling is a special move to get the King safe. The King moves 2 steps toward the Rook, and the Rook jumps over him! You can only do this if they haven't moved yet.",
     objectives: [
-      "Find checkmate in 1 move",
-      "Use the Queen to checkmate",
-      "Use the Rook to checkmate"
+      "Clear the path",
+      "Castle Kingside",
+      "Castle Queenside"
     ],
     unlockStars: 24
   },
   {
     id: 10,
-    title: "Play a Game!",
-    icon: "🏆",
-    description: "You're ready to play chess!",
-    storyIntro: "Congratulations, young chess master! You've learned all the pieces and rules. Now it's time to play a real game!",
+    chapter: "Chapter 4: Special Super Moves",
+    title: "En Passant",
+    icon: "👻",
+    description: "The Sneaky Capture",
+    storyIntro: "This is a secret move! If an enemy pawn runs 2 steps and lands right next to you, you can capture it as if it only moved 1 step. Sneaky!",
     objectives: [
-      "Set up the board correctly",
-      "Play a full game",
-      "Have fun!"
+      "Wait for the big step",
+      "Capture En Passant",
+      "Finish the lesson"
     ],
     unlockStars: 27
+  },
+
+  // CHAPTER 5: Fun Practice Games
+  {
+    id: 11,
+    chapter: "Chapter 5: Fun Practice Games",
+    title: "Pawn Wars",
+    icon: "🏁",
+    description: "Race to the other side!",
+    storyIntro: "It's a race! The first person to get a pawn to the other side wins! Remember, if a pawn reaches the end, it becomes a Queen!",
+    objectives: [
+      "Move your pawns",
+      "Promote to a Queen",
+      "Win the race"
+    ],
+    unlockStars: 30
+  },
+  {
+    id: 12,
+    chapter: "Chapter 5: Fun Practice Games",
+    title: "Knight's Adventure",
+    icon: "🦄",
+    description: "Capture all the pawns",
+    storyIntro: "Your Knight is hungry! Can you capture all the enemy pawns? Watch out for their attacks!",
+    objectives: [
+      "Capture a pawn",
+      "Capture 4 pawns",
+      "Capture all 8 pawns!"
+    ],
+    unlockStars: 33
+  },
+  {
+    id: 13,
+    chapter: "Chapter 5: Fun Practice Games",
+    title: "Capture the Flag",
+    icon: "🚩",
+    description: "Capture the Queen to win!",
+    storyIntro: "In this game, the Queen is the Flag. Whoever captures the enemy Queen first wins! Protect your Queen!",
+    objectives: [
+      "Develop your pieces",
+      "Attack the Queen",
+      "Capture the Queen!"
+    ],
+    unlockStars: 36
   }
 ];

@@ -158,7 +158,7 @@ export function LessonPage() {
   }, []);
 
   const onChessMove = useCallback((from: string, to: string, piece: string, isCapture: boolean, newFen: string) => {
-    setLessonState((prev) => handleMove(prev, { from, to, piece, isCapture }));
+    setLessonState((prev) => handleMove(prev, { from, to, piece, isCapture, newFen }));
     setCurrentFen(newFen);
     setLastMove(`${from}-${to}`);
     return true;
@@ -271,6 +271,7 @@ export function LessonPage() {
                 boardSize={Math.min(400, window.innerWidth - 40)}
                 highlightSquares={latestResponse?.highlightSquare ? [latestResponse.highlightSquare] : []}
                 customArrows={latestResponse?.drawArrow ? [latestResponse.drawArrow.split('-')] : []}
+                allowBlackMoves={config.allowBlackMoves}
               />
             )}
           </div>
