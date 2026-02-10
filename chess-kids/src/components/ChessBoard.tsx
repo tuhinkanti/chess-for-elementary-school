@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Chessboard, type SquareHandlerArgs, type PieceDropHandlerArgs } from 'react-chessboard';
 import { Chess, type Square } from 'chess.js';
 
@@ -6,18 +6,19 @@ interface ChessBoardProps {
   fen?: string;
   onMove?: (from: string, to: string, piece: string, isCapture: boolean, newFen: string) => boolean;
   highlightSquares?: string[];
-  customArrows?: string[][]; // Format: [['e2', 'e4']]
+  customArrows?: [string, string][]; // Format: [['e2', 'e4']]
   interactive?: boolean;
   boardSize?: number;
 }
 
 const EMPTY_HIGHLIGHTS: string[] = [];
+const EMPTY_ARROWS: [string, string][] = [];
 
 export function ChessBoard({
   fen,
   onMove,
   highlightSquares = EMPTY_HIGHLIGHTS,
-  customArrows = [],
+  customArrows = EMPTY_ARROWS,
   interactive = true,
   boardSize = 400,
 }: ChessBoardProps) {
@@ -26,14 +27,21 @@ export function ChessBoard({
   const [selectedSquare, setSelectedSquare] = useState<string | null>(null);
   const [moveSquares, setMoveSquares] = useState<Record<string, React.CSSProperties>>({});
 
-  // Derived state to handle fen prop changes
-  const [prevFen, setPrevFen] = useState(fen);
-  if (fen !== prevFen) {
-    setPrevFen(fen);
-    setGame(new Chess(fen));
-    setSelectedSquare(null);
-    setMoveSquares({});
-  }
+  // Sync game state with fen prop
+  useEffect(() => {
+    if (fen) {
+        try {
+             if (fen !== game.fen()) {
+                const newGame = new Chess(fen);
+                setGame(newGame);
+                setSelectedSquare(null);
+                setMoveSquares({});
+             }
+        } catch (e) {
+            console.error("Invalid FEN:", fen, e);
+        }
+    }
+  }, [fen, game]);
 
   const getMoveOptions = (square: Square) => {
     const moves = game.moves({ square, verbose: true });
@@ -76,12 +84,15 @@ export function ChessBoard({
       const piece = game.get(from as Square)?.type || '';
 
       const move = game.move({ from, to, promotion: 'q' });
-      const isCapture = !!move?.captured; // Check capture flag from move result
+      const isCapture = !!move?.captured;
+
       if (move) {
-        const whiteTurnFen = game.fen().replace(/ [bw] /, ' w ');
-        setGame(new Chess(whiteTurnFen));
+        const newFen = game.fen();
+        const newGame = new Chess(newFen);
+        setGame(newGame);
+
         if (onMove) {
-          return onMove(from, to, piece, isCapture, whiteTurnFen);
+          return onMove(from, to, piece, isCapture, newFen);
         }
         return true;
       }
@@ -120,22 +131,31 @@ export function ChessBoard({
     return styles;
   }, [moveSquares, selectedSquare, highlightSquares]);
 
+  const arrows = useMemo(() => {
+      return customArrows.map(([start, end]) => ({
+          startSquare: start,
+          endSquare: end,
+          color: 'orange'
+      }));
+  }, [customArrows]);
+
   return (
     <div className="chess-board-container" style={{ width: boardSize, height: boardSize }}>
       <Chessboard
-        options={{
-          position: game.fen(),
-          onPieceDrop: onDrop,
-          onSquareClick: handleSquareClick,
-          squareStyles: customSquareStyles,
-          customArrows: customArrows as any, // AI Hints
-          boardStyle: {
-            borderRadius: '8px',
-            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.3)',
-          },
-          darkSquareStyle: { backgroundColor: '#779952' },
-          lightSquareStyle: { backgroundColor: '#edeed1' },
-        } as any}
+          options={{
+            position: game.fen(),
+            onPieceDrop: onDrop,
+            onSquareClick: handleSquareClick,
+            squareStyles: customSquareStyles,
+            arrows: arrows,
+            boardStyle: {
+                borderRadius: '8px',
+                boxShadow: '0 8px 24px rgba(0, 0, 0, 0.3)',
+                width: boardSize, // Set width via style as well if needed
+            },
+            darkSquareStyle: { backgroundColor: '#779952' },
+            lightSquareStyle: { backgroundColor: '#edeed1' },
+          }}
       />
     </div>
   );
