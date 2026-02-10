@@ -7,6 +7,12 @@ import { anthropic } from '@ai-sdk/anthropic';
 
 const provider = process.env.AI_PROVIDER || 'local';
 
+// 🛡️ Security: Rate Limiting Configuration
+// Simple in-memory rate limiter to prevent abuse
+const RATE_LIMIT = 20; // requests
+const WINDOW_MS = 60 * 1000; // 1 minute
+const rateLimitMap = new Map<string, { count: number, resetTime: number }>();
+
 interface ChatMessage {
     role: 'user' | 'assistant' | 'system';
     content: string;
@@ -33,6 +39,29 @@ function getModel() {
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method !== 'POST') {
         return res.status(405).json({ error: 'Method not allowed' });
+    }
+
+    // 🛡️ Security: Rate Limiting Check
+    const forwarded = req.headers['x-forwarded-for'];
+    const ipString = Array.isArray(forwarded) ? forwarded[0] : forwarded || req.socket.remoteAddress || 'unknown';
+    const ip = ipString.split(',')[0].trim();
+
+    // Cleanup if map gets too large (prevent memory leak)
+    if (rateLimitMap.size > 10000) {
+        rateLimitMap.clear();
+    }
+
+    const now = Date.now();
+    const record = rateLimitMap.get(ip);
+
+    if (!record || now > record.resetTime) {
+        rateLimitMap.set(ip, { count: 1, resetTime: now + WINDOW_MS });
+    } else {
+        if (record.count >= RATE_LIMIT) {
+             console.warn(`Rate limit exceeded for IP: ${ip}`);
+             return res.status(429).json({ error: 'Too many requests. Please try again later.' });
+        }
+        record.count++;
     }
 
     try {
