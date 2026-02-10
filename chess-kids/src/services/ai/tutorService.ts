@@ -29,8 +29,18 @@ interface ChatMessage {
     content: string;
 }
 
+// Validation helper
+function isValidTutorResponse(data: any): data is TutorResponse {
+    return (
+        typeof data === 'object' &&
+        data !== null &&
+        typeof data.message === 'string' &&
+        ['encouraging', 'thinking', 'surprised', 'celebrating'].includes(data.mood)
+    );
+}
+
 class ChessTutorService {
-    private apiEndpoint = '/api/tutor';
+    private apiEndpoint = import.meta.env.VITE_API_ENDPOINT || '/api/tutor';
 
     /**
      * Chat with Gloop - supports multi-turn conversations
@@ -60,7 +70,17 @@ class ChessTutorService {
             }
 
             const data = await response.json();
-            return data as TutorResponse;
+
+            if (isValidTutorResponse(data)) {
+                return data;
+            } else {
+                 console.warn("Invalid AI response format:", data);
+                 return {
+                    message: "I'm having a little trouble thinking clearly right now.",
+                    mood: "thinking"
+                };
+            }
+
         } catch (error: any) {
             console.error("AI Tutor Error:", error);
 
@@ -79,9 +99,16 @@ class ChessTutorService {
     }
 
     private constructSystemPrompt(context?: GameContext): string {
-        const studentInfo = context?.studentContext
-            ? `\n## What You Know About This Student\n${context.studentContext}\n`
-            : '';
+        let studentInfo = '';
+        if (context?.studentContext) {
+            // Truncate student context to avoid token limits (approx 1000 chars)
+            const MAX_CONTEXT_LENGTH = 1000;
+            const truncatedContext = context.studentContext.length > MAX_CONTEXT_LENGTH
+                ? context.studentContext.substring(0, MAX_CONTEXT_LENGTH) + "..."
+                : context.studentContext;
+
+            studentInfo = `\n## What You Know About This Student\n${truncatedContext}\n`;
+        }
 
         const boardInfo = context?.fen
             ? `\nCurrent Board (FEN): ${context.fen}\nLast Move: ${context.lastMove || "None"}`
