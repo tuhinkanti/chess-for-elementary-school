@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Chessboard, type SquareHandlerArgs, type PieceDropHandlerArgs } from 'react-chessboard';
 import { Chess, type Square } from 'chess.js';
 
@@ -6,7 +6,7 @@ interface ChessBoardProps {
   fen?: string;
   onMove?: (from: string, to: string, piece: string, isCapture: boolean, newFen: string) => boolean;
   highlightSquares?: string[];
-  customArrows?: string[][]; // Format: [['e2', 'e4']]
+  customArrows?: [string, string][]; // Format: [['e2', 'e4']]
   interactive?: boolean;
   boardSize?: number;
 }
@@ -26,14 +26,19 @@ export function ChessBoard({
   const [selectedSquare, setSelectedSquare] = useState<string | null>(null);
   const [moveSquares, setMoveSquares] = useState<Record<string, React.CSSProperties>>({});
 
-  // Derived state to handle fen prop changes
-  const [prevFen, setPrevFen] = useState(fen);
-  if (fen !== prevFen) {
-    setPrevFen(fen);
-    setGame(new Chess(fen));
-    setSelectedSquare(null);
-    setMoveSquares({});
-  }
+  // Sync game state when FEN prop changes
+  useEffect(() => {
+    if (fen) {
+      try {
+        const newGame = new Chess(fen);
+        setGame(newGame);
+        setSelectedSquare(null);
+        setMoveSquares({});
+      } catch (e) {
+        console.error("Invalid FEN:", fen);
+      }
+    }
+  }, [fen]);
 
   const getMoveOptions = (square: Square) => {
     const moves = game.moves({ square, verbose: true });
@@ -73,15 +78,17 @@ export function ChessBoard({
 
   const handleMove = (from: string, to: string) => {
     try {
-      const piece = game.get(from as Square)?.type || '';
+      const gameCopy = new Chess(game.fen());
+      const piece = gameCopy.get(from as Square)?.type || '';
 
-      const move = game.move({ from, to, promotion: 'q' });
-      const isCapture = !!move?.captured; // Check capture flag from move result
+      const move = gameCopy.move({ from, to, promotion: 'q' });
+      const isCapture = !!move?.captured;
+
       if (move) {
-        const whiteTurnFen = game.fen().replace(/ [bw] /, ' w ');
-        setGame(new Chess(whiteTurnFen));
+        const newFen = gameCopy.fen();
+        setGame(gameCopy);
         if (onMove) {
-          return onMove(from, to, piece, isCapture, whiteTurnFen);
+          return onMove(from, to, piece, isCapture, newFen);
         }
         return true;
       }
@@ -123,19 +130,18 @@ export function ChessBoard({
   return (
     <div className="chess-board-container" style={{ width: boardSize, height: boardSize }}>
       <Chessboard
-        options={{
-          position: game.fen(),
-          onPieceDrop: onDrop,
-          onSquareClick: handleSquareClick,
-          squareStyles: customSquareStyles,
-          customArrows: customArrows as any, // AI Hints
-          boardStyle: {
-            borderRadius: '8px',
-            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.3)',
-          },
-          darkSquareStyle: { backgroundColor: '#779952' },
-          lightSquareStyle: { backgroundColor: '#edeed1' },
-        } as any}
+        position={game.fen()}
+        onPieceDrop={onDrop}
+        onSquareClick={handleSquareClick}
+        customSquareStyles={customSquareStyles}
+        customArrows={customArrows}
+        boardWidth={boardSize}
+        customBoardStyle={{
+          borderRadius: '8px',
+          boxShadow: '0 8px 24px rgba(0, 0, 0, 0.3)',
+        }}
+        customDarkSquareStyle={{ backgroundColor: '#779952' }}
+        customLightSquareStyle={{ backgroundColor: '#edeed1' }}
       />
     </div>
   );
