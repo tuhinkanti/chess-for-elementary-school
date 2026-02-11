@@ -12,6 +12,10 @@ interface ChatMessage {
     content: string;
 }
 
+const MAX_MESSAGES = 50;
+const MAX_CONTENT_LENGTH = 1000;
+const MAX_SYSTEM_PROMPT_LENGTH = 2000;
+
 function getModel() {
     switch (provider) {
         case 'local':
@@ -41,8 +45,29 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             systemPrompt?: string;
         };
 
-        if (!messages || messages.length === 0) {
-            return res.status(400).json({ error: 'Messages are required' });
+        // Security: Input Validation
+        if (!messages || !Array.isArray(messages) || messages.length === 0) {
+            return res.status(400).json({ error: 'Messages are required and must be an array' });
+        }
+
+        if (messages.length > MAX_MESSAGES) {
+             return res.status(400).json({ error: `Too many messages. Max allowed: ${MAX_MESSAGES}` });
+        }
+
+        for (const msg of messages) {
+            if (!msg.role || !['user', 'assistant', 'system'].includes(msg.role)) {
+                return res.status(400).json({ error: 'Invalid message role' });
+            }
+            if (typeof msg.content !== 'string') {
+                return res.status(400).json({ error: 'Message content must be a string' });
+            }
+            if (msg.content.length > MAX_CONTENT_LENGTH) {
+                return res.status(400).json({ error: `Message content too long. Max allowed: ${MAX_CONTENT_LENGTH} characters` });
+            }
+        }
+
+        if (systemPrompt && (typeof systemPrompt !== 'string' || systemPrompt.length > MAX_SYSTEM_PROMPT_LENGTH)) {
+            return res.status(400).json({ error: `System prompt invalid or too long. Max allowed: ${MAX_SYSTEM_PROMPT_LENGTH} characters` });
         }
 
         // Build the full prompt with system context and conversation history
