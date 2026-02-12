@@ -1,5 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
-import { useContext, useState, useEffect, useMemo, type ReactNode } from 'react';
+import { useState, useEffect, useMemo, type ReactNode } from 'react';
 import { type Profile, type ProfileProgress, generateId } from '../data/profiles';
 import {
   ProfileContext,
@@ -160,12 +160,4 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
       {children}
     </ProfileContext.Provider>
   );
-}
-
-export function useProfile() {
-  const context = useContext(ProfileContext);
-  if (context === undefined) {
-    throw new Error('useProfile must be used within a ProfileProvider');
-  }
-  return context;
 }

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowLeft, CheckCircle } from 'lucide-react';
@@ -46,6 +46,22 @@ export function LessonPage() {
 
   // AI Tutor
   const { messages, sendMessage, startConversation, encourageObjective, isLoading, clearChat, latestResponse } = useChessTutor();
+
+  // Memoize visualization props to prevent unnecessary ChessBoard re-renders
+  const highlightSquares = useMemo(() => {
+    return latestResponse?.highlightSquare ? [latestResponse.highlightSquare] : [];
+  }, [latestResponse?.highlightSquare]);
+
+  const customArrows: [string, string][] = useMemo(() => {
+    if (!latestResponse?.drawArrow) return [];
+
+    // Validate format "e2-e4"
+    const parts = latestResponse.drawArrow.split('-');
+    if (parts.length === 2) {
+      return [parts as [string, string]];
+    }
+    return [];
+  }, [latestResponse?.drawArrow]);
 
   useEffect(() => {
     if (!currentProfile) {
@@ -269,8 +285,8 @@ export function LessonPage() {
                 fen={config.fen || undefined}
                 onMove={(from, to, piece, isCapture, newFen) => onChessMove(from, to, piece, isCapture, newFen)}
                 boardSize={Math.min(400, window.innerWidth - 40)}
-                highlightSquares={latestResponse?.highlightSquare ? [latestResponse.highlightSquare] : []}
-                customArrows={latestResponse?.drawArrow ? [latestResponse.drawArrow.split('-')] : []}
+                highlightSquares={highlightSquares}
+                customArrows={customArrows}
               />
             )}
           </div>
