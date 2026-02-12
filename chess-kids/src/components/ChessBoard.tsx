@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Chessboard, type SquareHandlerArgs, type PieceDropHandlerArgs } from 'react-chessboard';
 import { Chess, type Square } from 'chess.js';
 
@@ -6,18 +6,19 @@ interface ChessBoardProps {
   fen?: string;
   onMove?: (from: string, to: string, piece: string, isCapture: boolean, newFen: string) => boolean;
   highlightSquares?: string[];
-  customArrows?: string[][]; // Format: [['e2', 'e4']]
+  customArrows?: [string, string][]; // Format: [['e2', 'e4']]
   interactive?: boolean;
   boardSize?: number;
 }
 
 const EMPTY_HIGHLIGHTS: string[] = [];
+const EMPTY_ARROWS: [string, string][] = [];
 
 export function ChessBoard({
   fen,
   onMove,
   highlightSquares = EMPTY_HIGHLIGHTS,
-  customArrows = [],
+  customArrows = EMPTY_ARROWS,
   interactive = true,
   boardSize = 400,
 }: ChessBoardProps) {
@@ -26,14 +27,19 @@ export function ChessBoard({
   const [selectedSquare, setSelectedSquare] = useState<string | null>(null);
   const [moveSquares, setMoveSquares] = useState<Record<string, React.CSSProperties>>({});
 
-  // Derived state to handle fen prop changes
-  const [prevFen, setPrevFen] = useState(fen);
-  if (fen !== prevFen) {
-    setPrevFen(fen);
-    setGame(new Chess(fen));
-    setSelectedSquare(null);
-    setMoveSquares({});
-  }
+  // Use useEffect to handle fen prop changes (fixing derived state anti-pattern)
+  useEffect(() => {
+    if (fen) {
+        try {
+            const newGame = new Chess(fen);
+            setGame(newGame);
+            setSelectedSquare(null);
+            setMoveSquares({});
+        } catch (e) {
+            console.error("Invalid FEN provided:", fen, e);
+        }
+    }
+  }, [fen]);
 
   const getMoveOptions = (square: Square) => {
     const moves = game.moves({ square, verbose: true });
@@ -75,13 +81,19 @@ export function ChessBoard({
     try {
       const piece = game.get(from as Square)?.type || '';
 
-      const move = game.move({ from, to, promotion: 'q' });
-      const isCapture = !!move?.captured; // Check capture flag from move result
+      // Clone game to validate move
+      const gameCopy = new Chess(game.fen());
+      const move = gameCopy.move({ from, to, promotion: 'q' });
+
+      const isCapture = !!move?.captured;
+
       if (move) {
-        const whiteTurnFen = game.fen().replace(/ [bw] /, ' w ');
-        setGame(new Chess(whiteTurnFen));
+        // Update state with the new game state (including turn change)
+        setGame(gameCopy);
+
         if (onMove) {
-          return onMove(from, to, piece, isCapture, whiteTurnFen);
+          // Pass the new FEN to the parent
+          return onMove(from, to, piece, isCapture, gameCopy.fen());
         }
         return true;
       }
@@ -120,22 +132,37 @@ export function ChessBoard({
     return styles;
   }, [moveSquares, selectedSquare, highlightSquares]);
 
+  // Map [string, string][] to Arrow[] for react-chessboard
+  const arrows = useMemo(() => {
+    return customArrows.map(([start, end]) => ({
+      startSquare: start,
+      endSquare: end,
+      color: 'rgb(255, 170, 0)', // Default orange color for arrows
+    }));
+  }, [customArrows]);
+
   return (
     <div className="chess-board-container" style={{ width: boardSize, height: boardSize }}>
       <Chessboard
         options={{
-          position: game.fen(),
-          onPieceDrop: onDrop,
-          onSquareClick: handleSquareClick,
-          squareStyles: customSquareStyles,
-          customArrows: customArrows as any, // AI Hints
-          boardStyle: {
-            borderRadius: '8px',
-            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.3)',
-          },
-          darkSquareStyle: { backgroundColor: '#779952' },
-          lightSquareStyle: { backgroundColor: '#edeed1' },
-        } as any}
+            position: game.fen(),
+            onPieceDrop: onDrop,
+            onSquareClick: handleSquareClick,
+            squareStyles: customSquareStyles,
+            arrows: arrows,
+            boardStyle: {
+                borderRadius: '8px',
+                boxShadow: '0 8px 24px rgba(0, 0, 0, 0.3)',
+                width: boardSize, // Pass width here if needed, or via wrapper style
+            },
+            darkSquareStyle: { backgroundColor: '#779952' },
+            lightSquareStyle: { backgroundColor: '#edeed1' },
+            // Ensure width is handled if library supports it via options or props?
+            // Library types say boardStyle is CSSProperties.
+            // But boardWidth prop is not in types.
+            // Wait, if I use options, I can't pass boardWidth as prop.
+            // But usually CSS width on container handles it if board is 100%.
+        }}
       />
     </div>
   );
