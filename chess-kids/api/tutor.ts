@@ -30,20 +30,57 @@ function getModel() {
     }
 }
 
+function validateInput(body: any): { valid: boolean; error?: string } {
+    const { messages, systemPrompt } = body || {};
+
+    if (!messages || !Array.isArray(messages)) {
+        return { valid: false, error: 'Messages are required' };
+    }
+
+    if (messages.length === 0) {
+        return { valid: false, error: 'Messages are required' };
+    }
+
+    if (messages.length > 50) {
+        return { valid: false, error: 'Too many messages (max 50)' };
+    }
+
+    if (systemPrompt && (typeof systemPrompt !== 'string' || systemPrompt.length > 2000)) {
+        return { valid: false, error: 'System prompt too long (max 2000 chars)' };
+    }
+
+    for (const msg of messages) {
+        if (!msg || typeof msg !== 'object') {
+            return { valid: false, error: 'Invalid message format' };
+        }
+
+        if (typeof msg.content !== 'string') {
+             return { valid: false, error: 'Invalid message format' };
+        }
+
+        if (msg.content.length > 1000) {
+            return { valid: false, error: 'Message content too long (max 1000 chars)' };
+        }
+    }
+
+    return { valid: true };
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method !== 'POST') {
         return res.status(405).json({ error: 'Method not allowed' });
     }
 
     try {
+        const validation = validateInput(req.body);
+        if (!validation.valid) {
+            return res.status(400).json({ error: validation.error });
+        }
+
         const { messages, systemPrompt } = req.body as {
-            messages?: ChatMessage[];
+            messages: ChatMessage[];
             systemPrompt?: string;
         };
-
-        if (!messages || messages.length === 0) {
-            return res.status(400).json({ error: 'Messages are required' });
-        }
 
         // Build the full prompt with system context and conversation history
         const systemMessage = systemPrompt || `You are Grandmaster Gloop, a friendly chess tutor for a 7-year-old.
