@@ -22,7 +22,7 @@ export function ExploreBoard({
   const squareSize = boardSize / 8;
 
   const isLightSquare = (fileIndex: number, rank: number) => {
-    return (fileIndex + rank) % 2 === 1;
+    return (fileIndex + rank) % 2 === 0;
   };
 
   const getSquareStyle = (square: string, isLight: boolean) => {

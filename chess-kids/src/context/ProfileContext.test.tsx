@@ -1,5 +1,6 @@
 import { render, act } from '@testing-library/react';
-import { ProfileProvider, useProfile } from './ProfileContext';
+import { ProfileProvider } from './ProfileContext';
+import { useProfile } from '../hooks/useProfile';
 import { describe, it, expect, beforeEach } from 'vitest';
 
 // Mock localStorage
@@ -57,7 +58,7 @@ const TestComponent = () => {
 
 describe('ProfileContext Functional', () => {
   beforeEach(() => {
-    localStorage.clear();
+    localStorageMock.clear(); // Use the mock directly
   });
 
   it('should create, select profiles and update progress correctly', async () => {
@@ -67,6 +68,10 @@ describe('ProfileContext Functional', () => {
       </ProfileProvider>
     );
 
+    // Initial state check - might fail if TestComponent logic renders "No Profile" but createProfile creates one immediately?
+    // Wait, the test clicks 'Create Alice'.
+
+    // Check initial text
     expect(getByTestId('current-profile-name')).toHaveTextContent('No Profile');
 
     // Create Alice
