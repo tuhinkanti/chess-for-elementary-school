@@ -4,12 +4,62 @@ import { generateText } from 'ai';
 import { createOpenAI } from '@ai-sdk/openai';
 import { google } from '@ai-sdk/google';
 import { anthropic } from '@ai-sdk/anthropic';
+import { z } from 'zod';
 
 const provider = process.env.AI_PROVIDER || 'local';
 
-interface ChatMessage {
-    role: 'user' | 'assistant' | 'system';
-    content: string;
+// Constants for Models
+const MODELS = {
+    local: 'qwen3-30b-a3b-2507',
+    claude: 'claude-sonnet-4-20250514',
+    gemini: 'gemini-2.0-flash',
+};
+
+// Zod Schemas
+const ChatMessageSchema = z.object({
+    role: z.enum(['user', 'assistant', 'system']),
+    content: z.string(),
+});
+
+const RequestSchema = z.object({
+    messages: z.array(ChatMessageSchema).min(1, "Messages are required"),
+    systemPrompt: z.string().optional(),
+});
+
+const TutorResponseSchema = z.object({
+    message: z.string(),
+    mood: z.enum(['encouraging', 'thinking', 'surprised', 'celebrating']),
+    highlightSquare: z.string().optional(),
+    drawArrow: z.string().optional(),
+    learnedFacts: z.array(z.string()).optional(),
+});
+
+// Simple In-Memory Rate Limiter (Note: This resets on cold starts in serverless)
+const rateLimitMap = new Map<string, { count: number; lastReset: number }>();
+const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
+const MAX_REQUESTS_PER_WINDOW = 10;
+
+function checkRateLimit(ip: string): boolean {
+    const now = Date.now();
+    const record = rateLimitMap.get(ip);
+
+    if (!record) {
+        rateLimitMap.set(ip, { count: 1, lastReset: now });
+        return true;
+    }
+
+    if (now - record.lastReset > RATE_LIMIT_WINDOW) {
+        record.count = 1;
+        record.lastReset = now;
+        return true;
+    }
+
+    if (record.count >= MAX_REQUESTS_PER_WINDOW) {
+        return false;
+    }
+
+    record.count++;
+    return true;
 }
 
 function getModel() {
@@ -21,13 +71,18 @@ function getModel() {
                 apiKey: 'lm-studio' // LM Studio doesn't require a real key
             });
             // Use .chat() to ensure chat completions endpoint is used
-            return lmStudio.chat('qwen3-30b-a3b-2507');
+            return lmStudio.chat(MODELS.local);
         case 'claude':
-            return anthropic('claude-sonnet-4-20250514');
+            return anthropic(MODELS.claude);
         case 'gemini':
         default:
-            return google('gemini-2.0-flash');
+            return google(MODELS.gemini);
     }
+}
+
+function extractJson(text: string): string {
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    return jsonMatch ? jsonMatch[0] : text;
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -35,15 +90,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(405).json({ error: 'Method not allowed' });
     }
 
-    try {
-        const { messages, systemPrompt } = req.body as {
-            messages?: ChatMessage[];
-            systemPrompt?: string;
-        };
+    // Rate Limiting
+    const clientIp = (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || 'unknown';
+    if (!checkRateLimit(clientIp)) {
+         return res.status(429).json({
+            message: "Wow, I've been thinking too much today! My magic brain needs a little rest. Try again in a minute!",
+            mood: 'thinking'
+        });
+    }
 
-        if (!messages || messages.length === 0) {
-            return res.status(400).json({ error: 'Messages are required' });
+    try {
+        // Validate Request Body
+        const validationResult = RequestSchema.safeParse(req.body);
+        if (!validationResult.success) {
+             console.error('Validation Error:', validationResult.error);
+             return res.status(400).json({ error: 'Invalid request body', details: validationResult.error.errors });
         }
+
+        const { messages, systemPrompt } = validationResult.data;
 
         // Build the full prompt with system context and conversation history
         const systemMessage = systemPrompt || `You are Grandmaster Gloop, a friendly chess tutor for a 7-year-old.
@@ -60,11 +124,28 @@ Always respond with valid JSON: {"message": "your response", "mood": "encouragin
             messages: fullMessages,
         });
 
-        // Try to parse as JSON (for structured TutorResponse)
+        // Parse JSON securely
         try {
-            const parsed = JSON.parse(text);
-            return res.status(200).json(parsed);
-        } catch {
+            const cleanJson = extractJson(text);
+            const parsed = JSON.parse(cleanJson);
+
+            // Validate Response Structure
+             const responseValidation = TutorResponseSchema.safeParse(parsed);
+
+             if(responseValidation.success) {
+                 return res.status(200).json(responseValidation.data);
+             } else {
+                 console.warn("AI returned invalid structure, using fallback parsing", responseValidation.error);
+                 // Return what we parsed, ensuring at least basic fields exist
+                 return res.status(200).json({
+                     message: parsed.message || text,
+                     mood: parsed.mood || 'encouraging',
+                     ...parsed
+                 });
+             }
+
+        } catch (jsonError) {
+            console.error('JSON Parse Error:', jsonError, 'Raw Text:', text);
             // If not valid JSON, wrap the text in a TutorResponse structure
             return res.status(200).json({
                 message: text,
@@ -82,10 +163,9 @@ Always respond with valid JSON: {"message": "your response", "mood": "encouragin
             });
         }
 
-        return res.status(200).json({
+        return res.status(500).json({
             message: "I'm having a little trouble thinking right now, but keep trying!",
             mood: 'thinking'
         });
     }
 }
-// Trigger review
