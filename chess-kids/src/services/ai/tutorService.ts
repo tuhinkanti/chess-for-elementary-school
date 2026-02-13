@@ -29,6 +29,8 @@ interface ChatMessage {
     content: string;
 }
 
+const MAX_MESSAGE_LENGTH = 500;
+
 class ChessTutorService {
     private apiEndpoint = '/api/tutor';
 
@@ -40,7 +42,10 @@ class ChessTutorService {
 
         // Convert chat messages to API format
         const apiMessages = messages.length > 0
-            ? messages.map(m => ({ role: m.role, content: m.content }))
+            ? messages.map(m => ({
+                role: m.role,
+                content: m.content.slice(0, MAX_MESSAGE_LENGTH).trim()
+            }))
             : [{ role: 'user' as const, content: 'Help me with this chess position!' }];
 
         try {
@@ -61,8 +66,8 @@ class ChessTutorService {
 
             const data = await response.json();
             return data as TutorResponse;
-        } catch (error: any) {
-            console.error("AI Tutor Error:", error);
+        } catch (error: unknown) {
+            console.error("AI Tutor Error:", error instanceof Error ? error.message : "Unknown error");
 
             return {
                 message: "I'm having a little trouble thinking right now, but keep trying!",

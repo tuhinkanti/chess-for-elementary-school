@@ -1,6 +1,15 @@
 import { render } from '@testing-library/react';
 import { ExploreBoard } from './ExploreBoard';
 import { describe, it, expect, vi } from 'vitest';
+import { BOARD_COLORS } from '../constants/colors';
+
+// Helper to convert hex to rgb
+function hexToRgb(hex: string) {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgb(${r}, ${g}, ${b})`;
+}
 
 describe('ExploreBoard', () => {
   it('renders correctly with correct square colors', () => {
@@ -36,17 +45,17 @@ describe('ExploreBoard', () => {
     // isLight = (0 + 8) % 2 === 1 -> False.
     // Color: #88a65e (Dark)
     const colorA8 = getSquareColor(0, 8);
-    expect(colorA8).toBe('rgb(136, 166, 94)'); // #88a65e
+    expect(colorA8).toBe(hexToRgb(BOARD_COLORS.dark));
 
     // a1: fileIndex 0, rank 1.
     // isLight = (0 + 1) % 2 === 1 -> True.
     // Color: #f0f1d8 (Light)
     const colorA1 = getSquareColor(0, 1);
-    expect(colorA1).toBe('rgb(240, 241, 216)'); // #f0f1d8
+    expect(colorA1).toBe(hexToRgb(BOARD_COLORS.light));
 
     // b8: fileIndex 1, rank 8.
     // isLight = (1 + 8) % 2 === 1 -> True.
     const colorB8 = getSquareColor(1, 8);
-    expect(colorB8).toBe('rgb(240, 241, 216)');
+    expect(colorB8).toBe(hexToRgb(BOARD_COLORS.light));
   });
 });
