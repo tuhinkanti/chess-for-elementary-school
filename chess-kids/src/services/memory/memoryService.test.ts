@@ -33,6 +33,7 @@ describe('MemoryService', () => {
         // In memoryService.ts, the store is initialized in the constructor.
         // To truly reset, we'd need to manually reach into the private store or re-instantiate.
         // For now, let's reset the store manually if possible or just rely on localStorage clear.
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (memoryService as any).store = (memoryService as any).createEmptyStore();
     });
 

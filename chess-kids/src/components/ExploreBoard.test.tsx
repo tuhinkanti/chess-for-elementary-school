@@ -1,6 +1,15 @@
 import { render } from '@testing-library/react';
 import { ExploreBoard } from './ExploreBoard';
 import { describe, it, expect, vi } from 'vitest';
+import { BOARD_COLORS } from '../constants/colors';
+
+const hexToRgb = (hex: string) => {
+  const bigint = parseInt(hex.slice(1), 16);
+  const r = (bigint >> 16) & 255;
+  const g = (bigint >> 8) & 255;
+  const b = bigint & 255;
+  return `rgb(${r}, ${g}, ${b})`;
+};
 
 describe('ExploreBoard', () => {
   it('renders correctly with correct square colors', () => {
@@ -34,19 +43,19 @@ describe('ExploreBoard', () => {
 
     // a8: fileIndex 0, rank 8.
     // isLight = (0 + 8) % 2 === 1 -> False.
-    // Color: #88a65e (Dark)
+    // Color: BOARD_COLORS.dark
     const colorA8 = getSquareColor(0, 8);
-    expect(colorA8).toBe('rgb(136, 166, 94)'); // #88a65e
+    expect(colorA8).toBe(hexToRgb(BOARD_COLORS.dark));
 
     // a1: fileIndex 0, rank 1.
     // isLight = (0 + 1) % 2 === 1 -> True.
-    // Color: #f0f1d8 (Light)
+    // Color: BOARD_COLORS.light
     const colorA1 = getSquareColor(0, 1);
-    expect(colorA1).toBe('rgb(240, 241, 216)'); // #f0f1d8
+    expect(colorA1).toBe(hexToRgb(BOARD_COLORS.light));
 
     // b8: fileIndex 1, rank 8.
     // isLight = (1 + 8) % 2 === 1 -> True.
     const colorB8 = getSquareColor(1, 8);
-    expect(colorB8).toBe('rgb(240, 241, 216)');
+    expect(colorB8).toBe(hexToRgb(BOARD_COLORS.light));
   });
 });
