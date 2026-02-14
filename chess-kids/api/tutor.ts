@@ -4,30 +4,77 @@ import { generateText } from 'ai';
 import { createOpenAI } from '@ai-sdk/openai';
 import { google } from '@ai-sdk/google';
 import { anthropic } from '@ai-sdk/anthropic';
+import { z } from 'zod';
 
 const provider = process.env.AI_PROVIDER || 'local';
 
-interface ChatMessage {
-    role: 'user' | 'assistant' | 'system';
-    content: string;
-}
+// Model Configuration
+const MODELS = {
+    local: {
+        provider: 'local',
+        modelId: 'qwen3-30b-a3b-2507',
+        baseURL: 'http://localhost:1234/v1',
+        apiKey: 'lm-studio'
+    },
+    claude: {
+        provider: 'anthropic',
+        modelId: 'claude-sonnet-4-20250514',
+    },
+    gemini: {
+        provider: 'google',
+        modelId: 'gemini-2.0-flash',
+    }
+} as const;
+
+// Input Validation Schema
+const ChatMessageSchema = z.object({
+    role: z.enum(['user', 'assistant', 'system']),
+    content: z.string()
+});
+
+const TutorRequestSchema = z.object({
+    messages: z.array(ChatMessageSchema).min(1),
+    systemPrompt: z.string().optional()
+});
 
 function getModel() {
-    switch (provider) {
+    const config = MODELS[provider as keyof typeof MODELS] || MODELS.gemini;
+
+    switch (config.provider) {
         case 'local':
-            // LM Studio runs on port 1234 by default with OpenAI-compatible API
             const lmStudio = createOpenAI({
-                baseURL: 'http://localhost:1234/v1',
-                apiKey: 'lm-studio' // LM Studio doesn't require a real key
+                baseURL: (config as any).baseURL,
+                apiKey: (config as any).apiKey
             });
-            // Use .chat() to ensure chat completions endpoint is used
-            return lmStudio.chat('qwen3-30b-a3b-2507');
-        case 'claude':
-            return anthropic('claude-sonnet-4-20250514');
-        case 'gemini':
+            return lmStudio.chat(config.modelId);
+        case 'anthropic':
+            return anthropic(config.modelId);
+        case 'google':
         default:
-            return google('gemini-2.0-flash');
+            return google(config.modelId);
     }
+}
+
+// Simple In-Memory Rate Limiting
+const requestCounts = new Map<string, { count: number, expiry: number }>();
+const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
+const MAX_REQUESTS = 10; // 10 requests per minute
+
+function checkRateLimit(ip: string): boolean {
+    const now = Date.now();
+    let record = requestCounts.get(ip);
+
+    if (!record || now > record.expiry) {
+        record = { count: 0, expiry: now + RATE_LIMIT_WINDOW };
+        requestCounts.set(ip, record);
+    }
+
+    if (record.count >= MAX_REQUESTS) {
+        return true;
+    }
+
+    record.count++;
+    return false;
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -35,15 +82,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(405).json({ error: 'Method not allowed' });
     }
 
-    try {
-        const { messages, systemPrompt } = req.body as {
-            messages?: ChatMessage[];
-            systemPrompt?: string;
-        };
+    const ip = (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || 'unknown';
+    if (checkRateLimit(ip)) {
+        return res.status(429).json({
+            message: "Wow, I've been thinking too much today! My magic brain needs a little rest. Try again in a minute!",
+            mood: 'thinking'
+        });
+    }
 
-        if (!messages || messages.length === 0) {
-            return res.status(400).json({ error: 'Messages are required' });
+    try {
+        const result = TutorRequestSchema.safeParse(req.body);
+        if (!result.success) {
+            return res.status(400).json({ error: 'Invalid request body', details: result.error.format() });
         }
+
+        const { messages, systemPrompt } = result.data;
 
         // Build the full prompt with system context and conversation history
         const systemMessage = systemPrompt || `You are Grandmaster Gloop, a friendly chess tutor for a 7-year-old.
@@ -57,12 +110,20 @@ Always respond with valid JSON: {"message": "your response", "mood": "encouragin
 
         const { text } = await generateText({
             model: getModel(),
-            messages: fullMessages,
+            messages: fullMessages as any,
         });
 
-        // Try to parse as JSON (for structured TutorResponse)
+        // Robust JSON Extraction
+        let jsonString = text;
+        const firstBrace = text.indexOf('{');
+        const lastBrace = text.lastIndexOf('}');
+
+        if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+            jsonString = text.substring(firstBrace, lastBrace + 1);
+        }
+
         try {
-            const parsed = JSON.parse(text);
+            const parsed = JSON.parse(jsonString);
             return res.status(200).json(parsed);
         } catch {
             // If not valid JSON, wrap the text in a TutorResponse structure
@@ -72,7 +133,11 @@ Always respond with valid JSON: {"message": "your response", "mood": "encouragin
             });
         }
     } catch (error: any) {
-        console.error('AI Tutor API Error:', error);
+        console.error('AI Tutor API Error:', JSON.stringify({
+            message: error.message,
+            stack: error.stack,
+            body: req.body
+        }));
 
         // Handle quota/rate limit errors
         if (error?.message?.includes('429') || error?.message?.includes('quota')) {
@@ -82,9 +147,8 @@ Always respond with valid JSON: {"message": "your response", "mood": "encouragin
             });
         }
 
-        return res.status(200).json({
-            message: "I'm having a little trouble thinking right now, but keep trying!",
-            mood: 'thinking'
+        return res.status(500).json({
+            error: "Internal Server Error"
         });
     }
 }
