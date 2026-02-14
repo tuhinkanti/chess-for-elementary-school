@@ -12,9 +12,51 @@ interface ChatMessage {
     content: string;
 }
 
+interface GameContext {
+    fen: string;
+    lastMove?: string;
+    lessonObjective?: string;
+    studentContext?: string;
+}
+
+function constructSystemPrompt(context?: GameContext): string {
+    const studentInfo = context?.studentContext
+        ? `\n## What You Know About This Student\n${context.studentContext}\n`
+        : '';
+
+    const boardInfo = context?.fen
+        ? `\nCurrent Board (FEN): ${context.fen}\nLast Move: ${context.lastMove || "None"}`
+        : '';
+
+    return `
+You are Grandmaster Gloop, a friendly, magical chess tutor for a 7-year-old.
+${studentInfo}
+Goal: Help the student with their current lesson in a fun, encouraging way.
+Objective: ${context?.lessonObjective || "Play a good move"}
+${boardInfo}
+
+Instructions:
+1. Be encouraging, concise, and use simple words.
+2. If the user made a mistake, explain WHY plainly (no complex notation).
+3. Reference what you know about the student's strengths and struggles if relevant.
+4. Keep responses SHORT - 1-3 sentences max for young learners.
+5. Identify NEW facts about the student based on this interaction (e.g., "Student struggles with knights", "Student likes visual hints") and include them in 'learnedFacts'.
+6. Always respond with valid JSON.
+
+Response format:
+{
+  "message": string (your friendly response),
+  "mood": "encouraging" | "thinking" | "surprised" | "celebrating",
+  "highlightSquare": string (optional),
+  "drawArrow": string (optional "e2-e4"),
+  "learnedFacts": string[] (optional list of new observations)
+}
+    `.trim();
+}
+
 function getModel() {
     switch (provider) {
-        case 'local':
+        case 'local': {
             // LM Studio runs on port 1234 by default with OpenAI-compatible API
             const lmStudio = createOpenAI({
                 baseURL: 'http://localhost:1234/v1',
@@ -22,6 +64,7 @@ function getModel() {
             });
             // Use .chat() to ensure chat completions endpoint is used
             return lmStudio.chat('qwen3-30b-a3b-2507');
+        }
         case 'claude':
             return anthropic('claude-sonnet-4-20250514');
         case 'gemini':
@@ -36,9 +79,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     try {
-        const { messages, systemPrompt } = req.body as {
+        const { messages, context } = req.body as {
             messages?: ChatMessage[];
-            systemPrompt?: string;
+            context?: GameContext;
         };
 
         if (!messages || messages.length === 0) {
@@ -46,9 +89,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
 
         // Build the full prompt with system context and conversation history
-        const systemMessage = systemPrompt || `You are Grandmaster Gloop, a friendly chess tutor for a 7-year-old.
-Be encouraging, concise, and explain things simply.
-Always respond with valid JSON: {"message": "your response", "mood": "encouraging"|"thinking"|"surprised"|"celebrating"}`;
+        const systemMessage = constructSystemPrompt(context);
 
         const fullMessages = [
             { role: 'system' as const, content: systemMessage },
@@ -71,11 +112,13 @@ Always respond with valid JSON: {"message": "your response", "mood": "encouragin
                 mood: 'encouraging'
             });
         }
-    } catch (error: any) {
+    } catch (error) {
         console.error('AI Tutor API Error:', error);
 
+        const errorMessage = error instanceof Error ? error.message : String(error);
+
         // Handle quota/rate limit errors
-        if (error?.message?.includes('429') || error?.message?.includes('quota')) {
+        if (errorMessage.includes('429') || errorMessage.includes('quota')) {
             return res.status(200).json({
                 message: "Wow, I've been thinking too much today! My magic brain needs a little rest. Try again in a minute!",
                 mood: 'thinking'
