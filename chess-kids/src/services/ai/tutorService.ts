@@ -29,8 +29,18 @@ interface ChatMessage {
     content: string;
 }
 
+function isTutorResponse(data: unknown): data is TutorResponse {
+    if (typeof data !== 'object' || data === null) return false;
+    const d = data as Record<string, unknown>;
+    return (
+        typeof d.message === 'string' &&
+        typeof d.mood === 'string' &&
+        ['encouraging', 'thinking', 'surprised', 'celebrating'].includes(d.mood)
+    );
+}
+
 class ChessTutorService {
-    private apiEndpoint = '/api/tutor';
+    private apiEndpoint = import.meta.env.VITE_API_ENDPOINT || '/api/tutor';
 
     /**
      * Chat with Gloop - supports multi-turn conversations
@@ -60,8 +70,18 @@ class ChessTutorService {
             }
 
             const data = await response.json();
-            return data as TutorResponse;
-        } catch (error: any) {
+
+            if (isTutorResponse(data)) {
+                return data;
+            }
+
+            console.error("Invalid response from tutor API:", data);
+            return {
+                message: "I'm having a little trouble understanding right now, but I'll try again!",
+                mood: "thinking"
+            };
+
+        } catch (error) {
             console.error("AI Tutor Error:", error);
 
             return {
