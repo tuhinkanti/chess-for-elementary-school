@@ -1,5 +1,6 @@
 import { render, act } from '@testing-library/react';
-import { ProfileProvider, useProfile } from './ProfileContext';
+import { ProfileProvider } from './ProfileContext';
+import { useProfile } from '../hooks/useProfile';
 import { describe, it, expect, beforeEach } from 'vitest';
 
 // Mock localStorage
