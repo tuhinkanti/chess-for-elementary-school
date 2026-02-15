@@ -29,8 +29,23 @@ interface ChatMessage {
     content: string;
 }
 
+const MAX_CONTEXT_LENGTH = 2000;
+
+function validateTutorResponse(data: any): data is TutorResponse {
+    if (!data || typeof data !== 'object') return false;
+    if (typeof data.message !== 'string') return false;
+    if (typeof data.mood !== 'string') return false;
+
+    // Optional checks
+    if (data.highlightSquare && typeof data.highlightSquare !== 'string') return false;
+    if (data.drawArrow && typeof data.drawArrow !== 'string') return false;
+    if (data.learnedFacts && !Array.isArray(data.learnedFacts)) return false;
+
+    return true;
+}
+
 class ChessTutorService {
-    private apiEndpoint = '/api/tutor';
+    private apiEndpoint = import.meta.env.VITE_API_ENDPOINT || '/api/tutor';
 
     /**
      * Chat with Gloop - supports multi-turn conversations
@@ -60,7 +75,16 @@ class ChessTutorService {
             }
 
             const data = await response.json();
-            return data as TutorResponse;
+
+            if (validateTutorResponse(data)) {
+                return data;
+            } else {
+                console.warn("Invalid API response format", data);
+                return {
+                    message: "I'm confused, but let's keep playing!",
+                    mood: "thinking"
+                };
+            }
         } catch (error: any) {
             console.error("AI Tutor Error:", error);
 
@@ -79,9 +103,14 @@ class ChessTutorService {
     }
 
     private constructSystemPrompt(context?: GameContext): string {
-        const studentInfo = context?.studentContext
-            ? `\n## What You Know About This Student\n${context.studentContext}\n`
-            : '';
+        let studentInfo = '';
+        if (context?.studentContext) {
+            const safeContext = context.studentContext.length > MAX_CONTEXT_LENGTH
+                ? context.studentContext.slice(-MAX_CONTEXT_LENGTH) + "\n...(truncated)"
+                : context.studentContext;
+
+            studentInfo = `\n## What You Know About This Student\n${safeContext}\n`;
+        }
 
         const boardInfo = context?.fen
             ? `\nCurrent Board (FEN): ${context.fen}\nLast Move: ${context.lastMove || "None"}`

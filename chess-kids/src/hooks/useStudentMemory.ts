@@ -6,7 +6,7 @@ interface UseStudentMemoryReturn {
     // Facts
     getActiveFacts: () => AtomicFact[];
     getHotAndWarmFacts: () => TieredFact[];
-    addFact: (fact: string, category: FactCategory, source: string) => AtomicFact;
+    addFact: (fact: string, category: FactCategory, source: string, relatedEntities?: string[]) => AtomicFact;
     accessFact: (factId: string) => void;
 
     // Summary
@@ -34,8 +34,8 @@ export function useStudentMemory(profileId: string | undefined): UseStudentMemor
         return memoryService.getHotAndWarmFacts(safeProfileId);
     }, [safeProfileId]);
 
-    const addFact = useCallback((fact: string, category: FactCategory, source: string) => {
-        return memoryService.addFact(safeProfileId, fact, category, source);
+    const addFact = useCallback((fact: string, category: FactCategory, source: string, relatedEntities: string[] = []) => {
+        return memoryService.addFact(safeProfileId, fact, category, source, relatedEntities);
     }, [safeProfileId]);
 
     const accessFact = useCallback((factId: string) => {
