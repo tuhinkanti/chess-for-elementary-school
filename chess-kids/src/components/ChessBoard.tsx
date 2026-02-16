@@ -9,6 +9,7 @@ interface ChessBoardProps {
   customArrows?: string[][]; // Format: [['e2', 'e4']]
   interactive?: boolean;
   boardSize?: number;
+  forceWhiteTurn?: boolean;
 }
 
 const EMPTY_HIGHLIGHTS: string[] = [];
@@ -20,6 +21,7 @@ export function ChessBoard({
   customArrows = [],
   interactive = true,
   boardSize = 400,
+  forceWhiteTurn = false,
 }: ChessBoardProps) {
   const [game, setGame] = useState(() => new Chess(fen));
 
@@ -78,10 +80,13 @@ export function ChessBoard({
       const move = game.move({ from, to, promotion: 'q' });
       const isCapture = !!move?.captured; // Check capture flag from move result
       if (move) {
-        const whiteTurnFen = game.fen().replace(/ [bw] /, ' w ');
-        setGame(new Chess(whiteTurnFen));
+        const nextFen = forceWhiteTurn
+          ? game.fen().replace(/ [bw] /, ' w ')
+          : game.fen();
+
+        setGame(new Chess(nextFen));
         if (onMove) {
-          return onMove(from, to, piece, isCapture, whiteTurnFen);
+          return onMove(from, to, piece, isCapture, nextFen);
         }
         return true;
       }

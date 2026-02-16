@@ -273,6 +273,7 @@ export function LessonPage() {
                 boardSize={Math.min(400, window.innerWidth - 40)}
                 highlightSquares={latestResponse?.highlightSquare ? [latestResponse.highlightSquare] : []}
                 customArrows={latestResponse?.drawArrow ? [latestResponse.drawArrow.split('-')] : []}
+                forceWhiteTurn={['piece-movement', 'capture'].includes(config.type)}
               />
             )}
           </div>

@@ -50,9 +50,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 Be encouraging, concise, and explain things simply.
 Always respond with valid JSON: {"message": "your response", "mood": "encouraging"|"thinking"|"surprised"|"celebrating"}`;
 
+        // Security: Filter out any client-supplied 'system' messages to prevent prompt injection
+        const safeMessages = messages.filter(m => m.role !== 'system');
+
         const fullMessages = [
             { role: 'system' as const, content: systemMessage },
-            ...messages
+            ...safeMessages
         ];
 
         const { text } = await generateText({
