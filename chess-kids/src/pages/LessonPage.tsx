@@ -15,6 +15,7 @@ import {
   handleSquareTap,
   handleMove,
   handleAnswer,
+  resetObjectiveState,
   type LessonState,
 } from '../data/lessonEngine';
 import { useProfile } from '../hooks/useProfile';
@@ -136,7 +137,8 @@ export function LessonPage() {
         encourageObjective(currentObjective.description, false);
 
         // Advance to next objective
-        setLessonState(prev => ({
+        prevMoveCount.current = 0;
+        setLessonState(prev => resetObjectiveState({
           ...prev,
           completedObjectives: newCompleted,
           currentObjectiveIndex: nextIndex,
@@ -271,6 +273,7 @@ export function LessonPage() {
                 boardSize={Math.min(400, window.innerWidth - 40)}
                 highlightSquares={latestResponse?.highlightSquare ? [latestResponse.highlightSquare] : []}
                 customArrows={latestResponse?.drawArrow ? [latestResponse.drawArrow.split('-')] : []}
+                forceWhiteTurn={['piece-movement', 'capture'].includes(config.type)}
               />
             )}
           </div>
