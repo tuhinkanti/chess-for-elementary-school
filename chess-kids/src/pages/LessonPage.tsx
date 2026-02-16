@@ -15,6 +15,7 @@ import {
   handleSquareTap,
   handleMove,
   handleAnswer,
+  resetObjectiveState,
   type LessonState,
 } from '../data/lessonEngine';
 import { useProfile } from '../hooks/useProfile';
@@ -136,7 +137,7 @@ export function LessonPage() {
         encourageObjective(currentObjective.description, false);
 
         // Advance to next objective
-        setLessonState(prev => ({
+        setLessonState(prev => resetObjectiveState({
           ...prev,
           completedObjectives: newCompleted,
           currentObjectiveIndex: nextIndex,
