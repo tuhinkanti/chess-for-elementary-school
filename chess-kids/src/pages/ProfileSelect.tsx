@@ -7,7 +7,7 @@ import { avatarOptions } from '../data/profiles';
 
 export function ProfileSelect() {
   const navigate = useNavigate();
-  const { profiles, selectProfile, createProfile, deleteProfile } = useProfile();
+  const { profiles, selectProfile, createProfile, deleteProfile, getProfileStars } = useProfile();
   const [showCreate, setShowCreate] = useState(false);
   const [newName, setNewName] = useState('');
   const [selectedAvatar, setSelectedAvatar] = useState(avatarOptions[0]);
@@ -74,7 +74,7 @@ export function ProfileSelect() {
                   <div className="profile-name">{profile.name}</div>
                   <div className="profile-stars">
                     <Star size={14} fill="gold" color="gold" />
-                    <span>0</span>
+                    <span>{getProfileStars(profile.id)}</span>
                   </div>
                 </button>
                 <button

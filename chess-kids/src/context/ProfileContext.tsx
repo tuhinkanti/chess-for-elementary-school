@@ -142,6 +142,11 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     updateProgress({ ...defaultProgress });
   };
 
+  const getProfileStars = (profileId: string) => {
+    const progress = data.progress[profileId];
+    return progress ? progress.stars : 0;
+  };
+
   return (
     <ProfileContext.Provider
       value={{
@@ -155,6 +160,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
         addStars,
         completeLesson,
         resetProgress,
+        getProfileStars,
       }}
     >
       {children}

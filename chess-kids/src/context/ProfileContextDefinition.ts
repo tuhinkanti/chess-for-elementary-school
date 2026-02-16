@@ -18,6 +18,7 @@ export interface ProfileContextType {
   addStars: (count: number) => void;
   completeLesson: (lessonId: number) => void;
   resetProgress: () => void;
+  getProfileStars: (profileId: string) => number;
 }
 
 export const defaultProgress: ProfileProgress = {

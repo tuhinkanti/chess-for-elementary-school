@@ -120,6 +120,14 @@ export function ChessBoard({
     return styles;
   }, [moveSquares, selectedSquare, highlightSquares]);
 
+  const arrows = useMemo(() => {
+    return customArrows.map(arrow => ({
+      startSquare: arrow[0],
+      endSquare: arrow[1],
+      color: arrow[2] || 'orange'
+    }));
+  }, [customArrows]);
+
   return (
     <div className="chess-board-container" style={{ width: boardSize, height: boardSize }}>
       <Chessboard
@@ -128,14 +136,14 @@ export function ChessBoard({
           onPieceDrop: onDrop,
           onSquareClick: handleSquareClick,
           squareStyles: customSquareStyles,
-          customArrows: customArrows as any, // AI Hints
+          arrows: arrows,
           boardStyle: {
             borderRadius: '8px',
             boxShadow: '0 8px 24px rgba(0, 0, 0, 0.3)',
           },
           darkSquareStyle: { backgroundColor: '#779952' },
           lightSquareStyle: { backgroundColor: '#edeed1' },
-        } as any}
+        }}
       />
     </div>
   );
