@@ -137,6 +137,7 @@ export function LessonPage() {
         encourageObjective(currentObjective.description, false);
 
         // Advance to next objective
+        prevMoveCount.current = 0;
         setLessonState(prev => resetObjectiveState({
           ...prev,
           completedObjectives: newCompleted,
