@@ -47,9 +47,12 @@ app.post('/api/tutor', async (req, res) => {
 Be encouraging, concise, and explain things simply.
 Always respond with valid JSON: {"message": "your response", "mood": "encouraging"|"thinking"|"surprised"|"celebrating"}`;
 
+        // Security: Filter out any client-supplied 'system' messages to prevent prompt injection
+        const safeMessages = messages.filter(m => m.role !== 'system');
+
         const fullMessages = [
             { role: 'system', content: systemMessage },
-            ...messages
+            ...safeMessages
         ];
 
         console.log(`[AI Provider: ${provider}] Processing request...`);
