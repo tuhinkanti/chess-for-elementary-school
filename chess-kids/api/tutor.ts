@@ -65,7 +65,7 @@ Always respond with valid JSON: {"message": "your response", "mood": "encouragin
 
         // Try to parse as JSON (for structured TutorResponse)
         const parsed = extractJson(text);
-        if (parsed) {
+        if (parsed !== null) {
             return res.status(200).json(parsed);
         }
 
