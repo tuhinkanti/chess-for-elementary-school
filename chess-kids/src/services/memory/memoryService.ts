@@ -109,35 +109,38 @@ class MemoryService {
     // Student Facts (Layer 1)
     // ============================================
 
-    getStudentFacts(profileId: string): StudentFacts {
+    async getStudentFacts(profileId: string): Promise<StudentFacts> {
         if (!this.store.students[profileId]) {
             this.store.students[profileId] = { profileId, facts: [] };
         }
         return this.store.students[profileId];
     }
 
-    getActiveFacts(profileId: string): AtomicFact[] {
-        return this.getStudentFacts(profileId).facts.filter(f => f.status === 'active');
+    async getActiveFacts(profileId: string): Promise<AtomicFact[]> {
+        const facts = await this.getStudentFacts(profileId);
+        return facts.facts.filter(f => f.status === 'active');
     }
 
-    getTieredFacts(profileId: string): TieredFact[] {
-        return this.getActiveFacts(profileId).map(fact => ({
+    async getTieredFacts(profileId: string): Promise<TieredFact[]> {
+        const facts = await this.getActiveFacts(profileId);
+        return facts.map(fact => ({
             ...fact,
             tier: getDecayTier(fact),
         }));
     }
 
-    getHotAndWarmFacts(profileId: string): TieredFact[] {
-        return this.getTieredFacts(profileId).filter(f => f.tier !== 'cold');
+    async getHotAndWarmFacts(profileId: string): Promise<TieredFact[]> {
+        const facts = await this.getTieredFacts(profileId);
+        return facts.filter(f => f.tier !== 'cold');
     }
 
-    addFact(
+    async addFact(
         profileId: string,
         fact: string,
         category: FactCategory,
         source: string,
         relatedEntities: string[] = []
-    ): AtomicFact {
+    ): Promise<AtomicFact> {
         const newFact: AtomicFact = {
             id: generateId(),
             fact,
@@ -151,14 +154,15 @@ class MemoryService {
             accessCount: 1,
         };
 
-        this.getStudentFacts(profileId).facts.push(newFact);
+        const studentFacts = await this.getStudentFacts(profileId);
+        studentFacts.facts.push(newFact);
         this.saveToStorage();
         return newFact;
     }
 
-    accessFact(profileId: string, factId: string): void {
-        const facts = this.getStudentFacts(profileId).facts;
-        const fact = facts.find(f => f.id === factId);
+    async accessFact(profileId: string, factId: string): Promise<void> {
+        const studentFacts = await this.getStudentFacts(profileId);
+        const fact = studentFacts.facts.find(f => f.id === factId);
         if (fact) {
             fact.accessCount++;
             fact.lastAccessed = new Date().toISOString();
@@ -166,16 +170,16 @@ class MemoryService {
         }
     }
 
-    supersedeFact(profileId: string, oldFactId: string, newFact: string): AtomicFact {
-        const facts = this.getStudentFacts(profileId).facts;
-        const oldFactObj = facts.find(f => f.id === oldFactId);
+    async supersedeFact(profileId: string, oldFactId: string, newFact: string): Promise<AtomicFact> {
+        const studentFacts = await this.getStudentFacts(profileId);
+        const oldFactObj = studentFacts.facts.find(f => f.id === oldFactId);
 
         if (!oldFactObj) {
             throw new Error(`Fact ${oldFactId} not found`);
         }
 
         // Create the new fact
-        const created = this.addFact(
+        const created = await this.addFact(
             profileId,
             newFact,
             oldFactObj.category,
@@ -195,7 +199,7 @@ class MemoryService {
     // Student Summary (Synthesized View)
     // ============================================
 
-    getStudentSummary(profileId: string): StudentSummary {
+    async getStudentSummary(profileId: string): Promise<StudentSummary> {
         const existing = this.store.summaries[profileId];
         if (existing) return existing;
 
@@ -203,8 +207,8 @@ class MemoryService {
         return this.regenerateSummary(profileId);
     }
 
-    regenerateSummary(profileId: string): StudentSummary {
-        const hotWarmFacts = this.getHotAndWarmFacts(profileId);
+    async regenerateSummary(profileId: string): Promise<StudentSummary> {
+        const hotWarmFacts = await this.getHotAndWarmFacts(profileId);
 
         const strengths = hotWarmFacts
             .filter(f => f.category === 'strength')
@@ -248,7 +252,7 @@ class MemoryService {
         return this.store.sessions[today];
     }
 
-    startSession(profileId: string, lessonId: number): SessionEntry {
+    async startSession(profileId: string, lessonId: number): Promise<SessionEntry> {
         const session: SessionEntry = {
             profileId,
             lessonId,
@@ -276,16 +280,16 @@ class MemoryService {
         }
     }
 
-    endSession(profileId: string): void {
+    async endSession(profileId: string): Promise<void> {
         this.updateCurrentSession(profileId, { endTime: new Date().toISOString() });
     }
 
-    recordTutorInteraction(
+    async recordTutorInteraction(
         profileId: string,
         type: 'arrow' | 'highlight' | 'message',
         context: string,
         response: string
-    ): void {
+    ): Promise<void> {
         const todaySessions = this.getTodaySessions().sessions;
         const currentSession = todaySessions.find(
             s => s.profileId === profileId && !s.endTime
@@ -298,7 +302,7 @@ class MemoryService {
         }
     }
 
-    recordObjectiveCompleted(profileId: string, objectiveId: string): void {
+    async recordObjectiveCompleted(profileId: string, objectiveId: string): Promise<void> {
         const todaySessions = this.getTodaySessions().sessions;
         const currentSession = todaySessions.find(
             s => s.profileId === profileId && !s.endTime
@@ -318,13 +322,13 @@ class MemoryService {
         return this.store.tacit;
     }
 
-    updateTacitKnowledge(updates: Partial<TacitKnowledge['globalPatterns']>): void {
+    async updateTacitKnowledge(updates: Partial<TacitKnowledge['globalPatterns']>): Promise<void> {
         Object.assign(this.store.tacit.globalPatterns, updates);
         this.store.tacit.lastUpdated = new Date().toISOString();
         this.saveToStorage();
     }
 
-    addRule(rule: string): void {
+    async addRule(rule: string): Promise<void> {
         if (!this.store.tacit.rules.includes(rule)) {
             this.store.tacit.rules.push(rule);
             this.store.tacit.lastUpdated = new Date().toISOString();
@@ -336,8 +340,8 @@ class MemoryService {
     // Context for AI Prompt
     // ============================================
 
-    getContextForAI(profileId: string): string {
-        const summary = this.getStudentSummary(profileId);
+    async getContextForAI(profileId: string): Promise<string> {
+        const summary = await this.getStudentSummary(profileId);
         const tacit = this.getTacitKnowledge();
 
         let context = `## Student Profile\n`;

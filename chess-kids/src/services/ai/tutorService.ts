@@ -9,6 +9,8 @@
  * Provider is selected via AI_PROVIDER environment variable on the server.
  */
 
+import { z } from 'zod';
+
 interface TutorResponse {
     message: string;
     mood: "encouraging" | "thinking" | "surprised" | "celebrating";
@@ -29,8 +31,18 @@ interface ChatMessage {
     content: string;
 }
 
+// Zod Schema for runtime validation of AI response
+const TutorResponseSchema = z.object({
+    message: z.string(),
+    mood: z.enum(["encouraging", "thinking", "surprised", "celebrating"]),
+    highlightSquare: z.string().optional(),
+    drawArrow: z.string().optional(),
+    learnedFacts: z.array(z.string()).optional()
+});
+
 class ChessTutorService {
-    private apiEndpoint = '/api/tutor';
+    private apiEndpoint = import.meta.env.VITE_API_ENDPOINT || '/api/tutor';
+    private MAX_CONTEXT_LENGTH = 1500; // Limit student context size to prevent token overflow
 
     /**
      * Chat with Gloop - supports multi-turn conversations
@@ -60,7 +72,22 @@ class ChessTutorService {
             }
 
             const data = await response.json();
-            return data as TutorResponse;
+
+            // Validate response structure
+            const validation = TutorResponseSchema.safeParse(data);
+            if (!validation.success) {
+                console.warn("Invalid AI response format:", validation.error);
+                // Attempt to salvage if message exists
+                if (data && typeof data.message === 'string') {
+                    return {
+                        message: data.message,
+                        mood: 'thinking' // Fallback mood
+                    } as TutorResponse;
+                }
+                throw new Error("Invalid response schema");
+            }
+
+            return validation.data as TutorResponse;
         } catch (error: any) {
             console.error("AI Tutor Error:", error);
 
@@ -79,9 +106,17 @@ class ChessTutorService {
     }
 
     private constructSystemPrompt(context?: GameContext): string {
-        const studentInfo = context?.studentContext
-            ? `\n## What You Know About This Student\n${context.studentContext}\n`
-            : '';
+        let studentInfo = '';
+
+        if (context?.studentContext) {
+            // Truncate student context if it exceeds limit
+            const fullContext = context.studentContext;
+            const safeContext = fullContext.length > this.MAX_CONTEXT_LENGTH
+                ? fullContext.substring(0, this.MAX_CONTEXT_LENGTH) + "\n...(older context truncated)"
+                : fullContext;
+
+            studentInfo = `\n## What You Know About This Student\n${safeContext}\n`;
+        }
 
         const boardInfo = context?.fen
             ? `\nCurrent Board (FEN): ${context.fen}\nLast Move: ${context.lastMove || "None"}`
