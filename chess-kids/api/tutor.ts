@@ -8,6 +8,36 @@ import { extractJson, validateTutorRequest } from '../src/utils/aiUtils.js';
 
 const provider = process.env.AI_PROVIDER || 'local';
 
+// Rate Limiting Configuration
+const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
+const MAX_REQUESTS = 20; // Requests per window
+const ipMap = new Map<string, { count: number; resetTime: number }>();
+
+function isRateLimited(ip: string): boolean {
+    const now = Date.now();
+
+    // Lazy cleanup to prevent memory leaks in long-lived instances
+    if (ipMap.size > 1000) {
+        for (const [key, val] of ipMap.entries()) {
+            if (now > val.resetTime) ipMap.delete(key);
+        }
+    }
+
+    const record = ipMap.get(ip);
+
+    if (!record || now > record.resetTime) {
+        ipMap.set(ip, { count: 1, resetTime: now + RATE_LIMIT_WINDOW });
+        return false;
+    }
+
+    if (record.count >= MAX_REQUESTS) {
+        return true;
+    }
+
+    record.count++;
+    return false;
+}
+
 interface ChatMessage {
     role: 'user' | 'assistant' | 'system';
     content: string;
@@ -37,6 +67,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(405).json({ error: 'Method not allowed' });
     }
 
+    // Rate Limiting Check
+    const ip = (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || 'unknown';
+    // If x-forwarded-for contains multiple IPs, take the first one
+    const clientIp = ip.split(',')[0].trim();
+
+    if (isRateLimited(clientIp)) {
+        return res.status(429).json({
+            error: 'Too many requests. Please try again in a minute.',
+            mood: 'thinking' // Maintain consistency with frontend expectations if possible, though strict 429 is better
+        });
+    }
+
     try {
         const validation = validateTutorRequest(req.body);
         if (!validation.valid) {
@@ -54,6 +96,7 @@ Be encouraging, concise, and explain things simply.
 Always respond with valid JSON: {"message": "your response", "mood": "encouraging"|"thinking"|"surprised"|"celebrating"}`;
 
         // Security: Filter out any client-supplied 'system' messages to prevent prompt injection
+        // (Note: validateTutorRequest already checks roles, but this is a defense-in-depth double check)
         const safeMessages = messages.filter(m => m.role !== 'system');
 
         const fullMessages = [
@@ -94,4 +137,3 @@ Always respond with valid JSON: {"message": "your response", "mood": "encouragin
         });
     }
 }
-// Trigger review

@@ -35,13 +35,21 @@ export function extractJson(text: string): unknown {
 }
 
 export function validateTutorRequest(body: unknown): { valid: boolean; error?: string } {
-    if (!body || typeof body !== 'object') {
+    if (!body || typeof body !== 'object' || body === null) {
         return { valid: false, error: 'Invalid request body' };
     }
 
-    // Check if messages exists and is an array
-    // We cast to any for check, or use type guard
     const b = body as Record<string, unknown>;
+
+    // Validate systemPrompt (optional)
+    if ('systemPrompt' in b) {
+        if (typeof b.systemPrompt !== 'string') {
+            return { valid: false, error: 'systemPrompt must be a string' };
+        }
+        if (b.systemPrompt.length > 5000) {
+            return { valid: false, error: 'systemPrompt is too long (max 5000 chars)' };
+        }
+    }
 
     if (!('messages' in b)) {
         return { valid: false, error: 'Messages are required' };
@@ -53,6 +61,35 @@ export function validateTutorRequest(body: unknown): { valid: boolean; error?: s
 
     if (b.messages.length === 0) {
         return { valid: false, error: 'Messages cannot be empty' };
+    }
+
+    if (b.messages.length > 10) {
+        return { valid: false, error: 'Too many messages (max 10)' };
+    }
+
+    for (const msg of b.messages) {
+        if (typeof msg !== 'object' || msg === null) {
+            return { valid: false, error: 'Each message must be an object' };
+        }
+
+        const m = msg as Record<string, unknown>;
+
+        if (!('role' in m) || typeof m.role !== 'string') {
+            return { valid: false, error: 'Message role is required and must be a string' };
+        }
+
+        // We only allow user and assistant roles from client. System role is handled by backend.
+        if (!['user', 'assistant'].includes(m.role)) {
+            return { valid: false, error: `Invalid role: ${m.role}. Must be 'user' or 'assistant'` };
+        }
+
+        if (!('content' in m) || typeof m.content !== 'string') {
+            return { valid: false, error: 'Message content is required and must be a string' };
+        }
+
+        if (m.content.length > 1000) {
+             return { valid: false, error: 'Message content is too long (max 1000 chars)' };
+        }
     }
 
     return { valid: true };
