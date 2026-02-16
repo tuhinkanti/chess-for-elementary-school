@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowLeft, CheckCircle } from 'lucide-react';
@@ -175,11 +175,11 @@ export function LessonPage() {
   }, [handleMistake]);
 
 
-  const handleAskTutor = useCallback(() => {
+  const handleAskTutor = useCallback(async () => {
     if (!config) return;
 
     // Get student context from memory
-    const studentContext = memory.getContextForAI();
+    const studentContext = await memory.getContextForAI();
 
     startConversation({
       fen: currentFen,
@@ -192,8 +192,8 @@ export function LessonPage() {
     memory.recordTutorInteraction('message', currentObjective?.description || 'general', 'asked');
   }, [config, currentObjective, startConversation, memory, currentFen, lastMove]);
 
-  const handleSendMessage = useCallback((userMessage: string) => {
-    const studentContext = memory.getContextForAI();
+  const handleSendMessage = useCallback(async (userMessage: string) => {
+    const studentContext = await memory.getContextForAI();
     sendMessage(userMessage, {
       fen: currentFen,
       lastMove,
@@ -211,6 +211,19 @@ export function LessonPage() {
       navigate('/');
     }
   };
+
+  const highlightSquares = useMemo(() =>
+    latestResponse?.highlightSquare ? [latestResponse.highlightSquare] : [],
+  [latestResponse?.highlightSquare]);
+
+  const customArrows = useMemo(() => {
+    if (!latestResponse?.drawArrow) return [];
+    const parts = latestResponse.drawArrow.split('-');
+    if (parts.length === 2) {
+       return [[parts[0], parts[1]]] as [string, string, string?][];
+    }
+    return [];
+  }, [latestResponse?.drawArrow]);
 
   if (!lesson || !config || !currentProfile) {
     return <div>Lesson not found</div>;
@@ -271,8 +284,8 @@ export function LessonPage() {
                 fen={config.fen || undefined}
                 onMove={(from, to, piece, isCapture, newFen) => onChessMove(from, to, piece, isCapture, newFen)}
                 boardSize={Math.min(400, window.innerWidth - 40)}
-                highlightSquares={latestResponse?.highlightSquare ? [latestResponse.highlightSquare] : []}
-                customArrows={latestResponse?.drawArrow ? [latestResponse.drawArrow.split('-')] : []}
+                highlightSquares={highlightSquares}
+                customArrows={customArrows}
                 forceWhiteTurn={['piece-movement', 'capture'].includes(config.type)}
               />
             )}
