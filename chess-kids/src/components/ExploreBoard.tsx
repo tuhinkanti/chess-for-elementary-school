@@ -7,6 +7,7 @@ interface ExploreBoardProps {
   onSquareTap: (square: string) => void;
   highlightCorners?: boolean;
   boardSize?: number;
+  showPieceSilhouettes?: boolean;
 }
 
 const FILES = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
@@ -18,8 +19,22 @@ export function ExploreBoard({
   onSquareTap,
   highlightCorners = false,
   boardSize = 400,
+  showPieceSilhouettes = true,
 }: ExploreBoardProps) {
   const squareSize = boardSize / 8;
+
+  // Piece placement for starting position (rank 1 and 8)
+  const getPieceEmoji = (square: string): string | null => {
+    if (!showPieceSilhouettes) return null;
+
+    const pieceMap: Record<string, string> = {
+      // Rank 1 (white pieces)
+      'a1': '♜', 'b1': '♞', 'c1': '♝', 'd1': '♛', 'e1': '♚', 'f1': '♝', 'g1': '♞', 'h1': '♜',
+      // Rank 8 (black pieces)
+      'a8': '♜', 'b8': '♞', 'c8': '♝', 'd8': '♛', 'e8': '♚', 'f8': '♝', 'g8': '♞', 'h8': '♜',
+    };
+    return pieceMap[square] || null;
+  };
 
   const isLightSquare = (fileIndex: number, rank: number) => {
     return (fileIndex + rank) % 2 === 1;
@@ -76,11 +91,20 @@ export function ExploreBoard({
           const styles = getSquareStyle(square, isLight);
           const isFirstFile = file === 'a';
           const isLastRank = rank === 1;
+          const pieceEmoji = getPieceEmoji(square);
+          const squareIndex = (8 - rank) * 8 + fileIndex; // Calculate index for animation delay
 
           return (
             <motion.button
               key={square}
               className="explore-square"
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{
+                duration: 0.3,
+                delay: squareIndex * 0.01, // Staggered animation
+                ease: "easeOut"
+              }}
               style={{
                 width: squareSize,
                 height: squareSize,
@@ -95,6 +119,20 @@ export function ExploreBoard({
               whileTap={{ scale: 0.95 }}
               onClick={() => onSquareTap(square)}
             >
+              {/* Piece silhouette */}
+              {pieceEmoji && (
+                <span
+                  style={{
+                    fontSize: squareSize * 0.6,
+                    opacity: 0.15,
+                    pointerEvents: 'none',
+                    position: 'absolute',
+                  }}
+                >
+                  {pieceEmoji}
+                </span>
+              )}
+
               {/* Rank labels (numbers 1-8) on the first file (a) */}
               {isFirstFile && (
                 <span

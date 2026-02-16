@@ -15,9 +15,9 @@ export const lessons: Lesson[] = [
     title: "The Chess Kingdom",
     icon: "🏰",
     description: "Meet the board and the pieces' homes",
-    storyIntro: "Welcome to the Chess Kingdom! Every piece has its own special home on this magical grid. See the numbers and letters? They help the Rook, Knight, and Bishop find their way back home! Let's explore the board where all the pieces live.",
+    storyIntro: "Welcome to the Chess Kingdom! I'm GM Gloop, your chess guide! 🧙‍♂️ Every piece has its own special home on this magical grid. See the numbers and letters? They help the Rook, Knight, and Bishop find their way back home! Let's explore the board together!",
     objectives: [
-      "Tap 5 squares where pieces could live",
+      "Tap 5 squares to wake up the chess board!",
       "Find the 4 corner homes (Rooks live here!)",
       "Count the squares in the bottom row"
     ],
