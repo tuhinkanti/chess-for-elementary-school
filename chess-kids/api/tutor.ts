@@ -4,7 +4,7 @@ import { generateText } from 'ai';
 import { createOpenAI } from '@ai-sdk/openai';
 import { google } from '@ai-sdk/google';
 import { anthropic } from '@ai-sdk/anthropic';
-import { extractJson, validateTutorRequest } from '../src/utils/aiUtils.js';
+import { extractJson, validateTutorRequest, rateLimit, AI_MODELS } from '../src/utils/aiUtils.js';
 
 const provider = process.env.AI_PROVIDER || 'local';
 
@@ -22,13 +22,13 @@ function getModel() {
                 apiKey: 'lm-studio' // LM Studio doesn't require a real key
             });
             // Use .chat() to ensure chat completions endpoint is used
-            return lmStudio.chat('qwen3-30b-a3b-2507');
+            return lmStudio.chat(AI_MODELS.LOCAL);
         }
         case 'claude':
-            return anthropic('claude-sonnet-4-20250514');
+            return anthropic(AI_MODELS.CLAUDE);
         case 'gemini':
         default:
-            return google('gemini-2.0-flash');
+            return google(AI_MODELS.GEMINI);
     }
 }
 
@@ -38,6 +38,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     try {
+        // Rate Limiting
+        const ip = (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || 'unknown';
+        if (!rateLimit(ip)) {
+            return res.status(429).json({ error: 'Too many requests. Please try again later.' });
+        }
+
         const validation = validateTutorRequest(req.body);
         if (!validation.valid) {
             return res.status(400).json({ error: validation.error });
@@ -78,7 +84,7 @@ Always respond with valid JSON: {"message": "your response", "mood": "encouragin
             mood: 'encouraging'
         });
     } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
-        console.error('AI Tutor API Error:', error);
+        console.error('AI Tutor API Error:', error?.message || error, error?.stack);
 
         // Handle quota/rate limit errors
         if (error?.message?.includes('429') || error?.message?.includes('quota')) {
@@ -88,7 +94,8 @@ Always respond with valid JSON: {"message": "your response", "mood": "encouragin
             });
         }
 
-        return res.status(200).json({
+        // Return 500 for server errors
+        return res.status(500).json({
             message: "I'm having a little trouble thinking right now, but keep trying!",
             mood: 'thinking'
         });
