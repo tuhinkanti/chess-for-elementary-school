@@ -46,7 +46,7 @@ export function LessonPage() {
   const memory = useStudentMemory(currentProfile?.id);
 
   // AI Tutor
-  const { messages, sendMessage, startConversation, encourageObjective, isLoading, clearChat, latestResponse } = useChessTutor();
+  const { messages, sendMessage, startConversation, encourageObjective, sendGreeting, isLoading, clearChat, latestResponse } = useChessTutor();
 
   useEffect(() => {
     if (!currentProfile) {
@@ -57,7 +57,7 @@ export function LessonPage() {
   // Start session when lesson begins
   useEffect(() => {
     memory.startSession(lessonId);
-    
+
     // End session when leaving
     return () => {
       memory.endSession();
@@ -87,7 +87,7 @@ export function LessonPage() {
 
     // Record the mistake so the AI knows
     memory.recordTutorInteraction('message', `Mistake: ${context}`, 'system');
-    
+
     // Also add a temporary fact about the struggle if it's specific
     // memory.addFact(`Struggled with ${context}`, 'skill-gap', 'system');
   }, [memory]);
@@ -98,7 +98,7 @@ export function LessonPage() {
 
     const isComplete = checkObjectiveComplete(currentObjective, lessonState);
     const moveMade = lessonState.moveCount > prevMoveCount.current;
-    
+
     if (moveMade) {
       prevMoveCount.current = lessonState.moveCount;
     }
@@ -148,7 +148,7 @@ export function LessonPage() {
       // Move made but objective NOT complete. Check if it was a "wrong" move.
       // For objectives that require a specific single move/capture, any other move is wrong.
       const isSingleAction = ['move-piece', 'capture'].includes(currentObjective.validator.type);
-      
+
       if (isSingleAction) {
         handleMistake(currentObjective.description);
       }
@@ -244,13 +244,30 @@ export function LessonPage() {
             className="start-button"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            onClick={() => setShowStory(false)}
+            onClick={() => {
+              setShowStory(false);
+              sendGreeting(lesson.title);
+            }}
           >
             Let's Practice!
           </motion.button>
         </motion.div>
       ) : (
         <div className="lesson-content">
+          {/* Gloop Tutor - Inline on the left */}
+          <div className="gloop-section">
+            <TutorMascot
+              messages={messages}
+              isLoading={isLoading}
+              onSendMessage={handleSendMessage}
+              onClose={clearChat}
+              latestMood={latestResponse?.mood}
+              inline={true}
+              currentHint={currentObjective?.description}
+            />
+          </div>
+
+          {/* Board Section - Center */}
           <div className={`board-section ${isShaking ? 'shake' : ''}`}>
             {showNumberPicker ? (
               <NumberPicker
@@ -278,6 +295,7 @@ export function LessonPage() {
             )}
           </div>
 
+          {/* Objectives Section - Right */}
           <div className="objectives-section">
             <div className="objectives-header">
               <h3>Goals:</h3>
@@ -327,15 +345,38 @@ export function LessonPage() {
         onComplete={handleCelebrationComplete}
       />
 
-      <TutorMascot
-        messages={messages}
-        isLoading={isLoading}
-        onSendMessage={handleSendMessage}
-        onClose={clearChat}
-        latestMood={latestResponse?.mood}
-      />
+
 
       <style>{`
+        .gloop-section {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          min-width: 280px;
+        }
+
+        .lesson-content {
+          display: flex;
+          flex-direction: row;
+          align-items: flex-start;
+          justify-content: center;
+          gap: 2rem;
+          flex-wrap: wrap;
+        }
+
+        @media (max-width: 768px) {
+          .lesson-content {
+            flex-direction: column;
+            align-items: center;
+          }
+          
+          .gloop-section {
+            order: -1;
+            width: 100%;
+            max-width: 400px;
+          }
+        }
+
         .objectives-header {
           display: flex;
           justify-content: space-between;

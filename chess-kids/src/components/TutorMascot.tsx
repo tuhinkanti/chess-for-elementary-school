@@ -14,9 +14,11 @@ interface TutorMascotProps {
   onSendMessage: (message: string) => void;
   onClose: () => void;
   latestMood?: TutorResponse['mood'];
+  inline?: boolean; // New: inline mode for positioning next to board
+  currentHint?: string; // New: default hint to show when no messages
 }
 
-export function TutorMascot({ messages, isLoading, onSendMessage, onClose, latestMood }: TutorMascotProps) {
+export function TutorMascot({ messages, isLoading, onSendMessage, onClose, latestMood, inline = false, currentHint }: TutorMascotProps) {
   const [inputValue, setInputValue] = useState('');
   const [isExpanded, setIsExpanded] = useState(false);
   const chatContainerRef = useRef<HTMLDivElement>(null);
@@ -53,10 +55,18 @@ export function TutorMascot({ messages, isLoading, onSendMessage, onClose, lates
   const mood = latestMood || 'encouraging';
   const hasMessages = messages.length > 0;
 
+  // In inline mode, always show. In fixed mode, only show when loading or has messages
+  const shouldShow = inline || isLoading || hasMessages;
+
+  // Default message when no messages exist (inline mode only)
+  const displayMessages = messages.length > 0 ? messages : (
+    inline && currentHint ? [{ role: 'assistant' as const, content: currentHint, mood: 'encouraging' as const }] : []
+  );
+
   return (
-    <div className="tutor-container">
+    <div className={inline ? "tutor-container-inline" : "tutor-container"}>
       <AnimatePresence>
-        {(isLoading || hasMessages) && (
+        {shouldShow && (
           <motion.div
             className={`tutor-mascot-wrapper ${isExpanded ? 'expanded' : ''}`}
             initial={{ opacity: 0, x: 50, scale: 0.8 }}
@@ -71,7 +81,7 @@ export function TutorMascot({ messages, isLoading, onSendMessage, onClose, lates
               </div>
 
               <div className="chat-messages" ref={chatContainerRef}>
-                {messages.map((msg, index) => (
+                {displayMessages.map((msg, index) => (
                   <div key={index} className={`chat-message ${msg.role}`}>
                     {msg.role === 'assistant' && (
                       <span className="message-avatar">🧙‍♂️</span>
@@ -145,6 +155,17 @@ export function TutorMascot({ messages, isLoading, onSendMessage, onClose, lates
                     right: 20px;
                     z-index: 1000;
                     pointer-events: none;
+                }
+
+                .tutor-container-inline {
+                    position: relative;
+                    pointer-events: auto;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    gap: 12px;
+                    width: 100%;
+                    max-width: 320px;
                 }
 
                 .tutor-mascot-wrapper {

@@ -13,6 +13,7 @@ interface UseChessTutorReturn {
     sendMessage: (userMessage: string, context?: GameContext) => Promise<void>;
     startConversation: (context: GameContext) => Promise<void>;
     encourageObjective: (objectiveDescription: string, isLessonComplete: boolean) => void;
+    sendGreeting: (lessonTitle: string) => void; // New: send auto-greeting
     isLoading: boolean;
     clearChat: () => void;
     latestResponse: TutorResponse | null;
@@ -125,11 +126,36 @@ export const useChessTutor = (): UseChessTutorReturn => {
         });
     }, []);
 
+    // Send a friendly greeting when lesson starts (no API call)
+    const sendGreeting = useCallback((lessonTitle: string) => {
+        const greetings = [
+            `Hi there! 👋 Welcome to ${lessonTitle}! I'm GM Gloop, and I'm here to help you learn chess. Let's have fun together!`,
+            `Hello, chess champion! 🎉 Ready to explore ${lessonTitle}? I'll be right here if you need any help!`,
+            `Hey! 🌟 Let's start ${lessonTitle} together! Remember, I'm here to guide you every step of the way!`,
+            `Welcome! 🏰 ${lessonTitle} is going to be exciting! If you get stuck, just ask me for help!`
+        ];
+
+        const randomGreeting = greetings[Math.floor(Math.random() * greetings.length)];
+
+        const greetingMessage: ChatMessage = {
+            role: 'assistant',
+            content: randomGreeting,
+            mood: 'encouraging'
+        };
+
+        setMessages([greetingMessage]);
+        setLatestResponse({
+            message: randomGreeting,
+            mood: 'encouraging'
+        });
+    }, []);
+
     return {
         messages,
         sendMessage,
         startConversation,
         encourageObjective,
+        sendGreeting,
         isLoading,
         clearChat,
         latestResponse
