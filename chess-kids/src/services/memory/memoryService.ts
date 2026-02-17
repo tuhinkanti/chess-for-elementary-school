@@ -99,9 +99,16 @@ class MemoryService {
 
     private saveToStorage(): void {
         try {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(this.store));
+            // Wrap in setTimeout to unblock main thread (pseudo-async)
+            setTimeout(() => {
+                try {
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(this.store));
+                } catch (e) {
+                    console.error('Failed to save memory store inside timeout:', e);
+                }
+            }, 0);
         } catch (e) {
-            console.error('Failed to save memory store:', e);
+            console.error('Failed to schedule memory save:', e);
         }
     }
 

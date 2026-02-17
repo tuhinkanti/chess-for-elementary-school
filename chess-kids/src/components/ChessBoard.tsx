@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Chessboard, type SquareHandlerArgs, type PieceDropHandlerArgs } from 'react-chessboard';
 import { Chess, type Square } from 'chess.js';
 
@@ -6,7 +6,7 @@ interface ChessBoardProps {
   fen?: string;
   onMove?: (from: string, to: string, piece: string, isCapture: boolean, newFen: string) => boolean;
   highlightSquares?: string[];
-  customArrows?: string[][]; // Format: [['e2', 'e4']]
+  customArrows?: [string, string, string?][]; // Format: [['e2', 'e4', 'orange']]
   interactive?: boolean;
   boardSize?: number;
   forceWhiteTurn?: boolean;
@@ -29,13 +29,11 @@ export function ChessBoard({
   const [moveSquares, setMoveSquares] = useState<Record<string, React.CSSProperties>>({});
 
   // Derived state to handle fen prop changes
-  const [prevFen, setPrevFen] = useState(fen);
-  if (fen !== prevFen) {
-    setPrevFen(fen);
+  useEffect(() => {
     setGame(new Chess(fen));
     setSelectedSquare(null);
     setMoveSquares({});
-  }
+  }, [fen]);
 
   const getMoveOptions = (square: Square) => {
     const moves = game.moves({ square, verbose: true });

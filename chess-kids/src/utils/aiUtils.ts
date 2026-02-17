@@ -1,3 +1,36 @@
+export const AI_MODELS = {
+    LOCAL: 'qwen3-30b-a3b-2507',
+    CLAUDE: 'claude-sonnet-4-20250514',
+    GEMINI: 'gemini-2.0-flash',
+};
+
+// Simple in-memory rate limiter
+const RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1 minute
+const MAX_REQUESTS_PER_WINDOW = 20;
+const ipRequests = new Map<string, number[]>();
+
+export function rateLimit(ip: string): boolean {
+    const now = Date.now();
+    const requests = ipRequests.get(ip) || [];
+
+    // Filter out old requests
+    const recentRequests = requests.filter(time => now - time < RATE_LIMIT_WINDOW_MS);
+
+    if (recentRequests.length >= MAX_REQUESTS_PER_WINDOW) {
+        return false;
+    }
+
+    recentRequests.push(now);
+    ipRequests.set(ip, recentRequests);
+
+    // Lazy cleanup: If map gets too big, clear it (simple strategy)
+    if (ipRequests.size > 1000) {
+        ipRequests.clear();
+    }
+
+    return true;
+}
+
 export function extractJson(text: string): unknown {
     if (!text || typeof text !== 'string') {
         return null;
@@ -53,6 +86,25 @@ export function validateTutorRequest(body: unknown): { valid: boolean; error?: s
 
     if (b.messages.length === 0) {
         return { valid: false, error: 'Messages cannot be empty' };
+    }
+
+    if (b.messages.length > 10) {
+        return { valid: false, error: 'Too many messages' };
+    }
+
+    for (const msg of b.messages) {
+        if (!msg || typeof msg !== 'object') {
+            return { valid: false, error: 'Invalid message format' };
+        }
+        if (!('role' in msg) || !['user', 'assistant', 'system'].includes(msg.role)) {
+            return { valid: false, error: 'Invalid message role' };
+        }
+        if (!('content' in msg) || typeof msg.content !== 'string') {
+            return { valid: false, error: 'Invalid message content' };
+        }
+        if (msg.content.length > 1000) {
+            return { valid: false, error: 'Message too long (max 1000 chars)' };
+        }
     }
 
     return { valid: true };
