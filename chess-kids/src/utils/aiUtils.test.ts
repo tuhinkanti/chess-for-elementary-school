@@ -59,4 +59,54 @@ describe('validateTutorRequest', () => {
   it('fails if messages array is empty', () => {
     expect(validateTutorRequest({ messages: [] })).toEqual({ valid: false, error: 'Messages cannot be empty' });
   });
+
+  it('fails if too many messages', () => {
+    const messages = Array(51).fill({ role: 'user', content: 'hi' });
+    expect(validateTutorRequest({ messages })).toEqual({ valid: false, error: 'Too many messages (max 50)' });
+  });
+
+  it('fails if message content is too long', () => {
+    const content = 'a'.repeat(1001);
+    const messages = [{ role: 'user', content }];
+    expect(validateTutorRequest({ messages })).toEqual({ valid: false, error: 'Message content too long (max 1000 chars)' });
+  });
+
+  it('fails if role is invalid', () => {
+    const messages = [{ role: 'admin', content: 'hi' }];
+    expect(validateTutorRequest({ messages })).toEqual({ valid: false, error: 'Invalid role (must be user or assistant)' });
+  });
+
+  it('fails if role is system (client should not send system messages)', () => {
+    const messages = [{ role: 'system', content: 'hack' }];
+    expect(validateTutorRequest({ messages })).toEqual({ valid: false, error: 'Invalid role (must be user or assistant)' });
+  });
+
+  it('fails if content is not a string', () => {
+    const messages = [{ role: 'user', content: 123 }];
+    expect(validateTutorRequest({ messages })).toEqual({ valid: false, error: 'Content must be a string' });
+  });
+
+  it('validates optional systemPrompt', () => {
+    const body = {
+      messages: [{ role: 'user', content: 'hi' }],
+      systemPrompt: 'Be nice'
+    };
+    expect(validateTutorRequest(body)).toEqual({ valid: true });
+  });
+
+  it('fails if systemPrompt is too long', () => {
+    const body = {
+      messages: [{ role: 'user', content: 'hi' }],
+      systemPrompt: 'a'.repeat(5001)
+    };
+    expect(validateTutorRequest(body)).toEqual({ valid: false, error: 'System prompt too long (max 5000 chars)' });
+  });
+
+  it('fails if systemPrompt is not a string', () => {
+    const body = {
+      messages: [{ role: 'user', content: 'hi' }],
+      systemPrompt: 123
+    };
+    expect(validateTutorRequest(body)).toEqual({ valid: false, error: 'System prompt must be a string' });
+  });
 });
