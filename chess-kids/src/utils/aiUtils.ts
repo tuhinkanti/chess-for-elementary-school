@@ -39,10 +39,9 @@ export function validateTutorRequest(body: unknown): { valid: boolean; error?: s
         return { valid: false, error: 'Invalid request body' };
     }
 
-    // Check if messages exists and is an array
-    // We cast to any for check, or use type guard
     const b = body as Record<string, unknown>;
 
+    // 1. Validate 'messages'
     if (!('messages' in b)) {
         return { valid: false, error: 'Messages are required' };
     }
@@ -51,8 +50,51 @@ export function validateTutorRequest(body: unknown): { valid: boolean; error?: s
          return { valid: false, error: 'Messages must be an array' };
     }
 
-    if (b.messages.length === 0) {
+    const messages = b.messages as unknown[];
+
+    if (messages.length === 0) {
         return { valid: false, error: 'Messages cannot be empty' };
+    }
+
+    // Security: Limit number of messages to prevent DoS/token exhaustion
+    if (messages.length > 50) {
+        return { valid: false, error: 'Too many messages (max 50)' };
+    }
+
+    for (const msg of messages) {
+        if (typeof msg !== 'object' || msg === null) {
+            return { valid: false, error: 'Invalid message format' };
+        }
+
+        const m = msg as Record<string, unknown>;
+        const { role, content } = m;
+
+        // Security: Strict role validation
+        if (role !== 'user' && role !== 'assistant') {
+            return { valid: false, error: 'Invalid role (must be user or assistant)' };
+        }
+
+        // Security: Content validation
+        if (typeof content !== 'string') {
+            return { valid: false, error: 'Content must be a string' };
+        }
+
+        if (content.length > 1000) {
+            return { valid: false, error: 'Message content too long (max 1000 chars)' };
+        }
+    }
+
+    // 2. Validate 'systemPrompt' (optional)
+    if ('systemPrompt' in b) {
+        const prompt = b.systemPrompt;
+        // If it exists, it must be a string
+        if (typeof prompt !== 'string') {
+            return { valid: false, error: 'System prompt must be a string' };
+        }
+        // Limit length to prevent massive prompt injection
+        if (prompt.length > 5000) {
+             return { valid: false, error: 'System prompt too long (max 5000 chars)' };
+        }
     }
 
     return { valid: true };
