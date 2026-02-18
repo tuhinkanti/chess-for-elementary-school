@@ -40,7 +40,6 @@ export function validateTutorRequest(body: unknown): { valid: boolean; error?: s
     }
 
     // Check if messages exists and is an array
-    // We cast to any for check, or use type guard
     const b = body as Record<string, unknown>;
 
     if (!('messages' in b)) {
@@ -51,8 +50,53 @@ export function validateTutorRequest(body: unknown): { valid: boolean; error?: s
          return { valid: false, error: 'Messages must be an array' };
     }
 
-    if (b.messages.length === 0) {
+    const messages = b.messages as unknown[];
+
+    if (messages.length === 0) {
         return { valid: false, error: 'Messages cannot be empty' };
+    }
+
+    // Security: Limit message count to prevent DoS
+    if (messages.length > 50) {
+        return { valid: false, error: 'Too many messages (max 50)' };
+    }
+
+    // Validate each message
+    for (const msg of messages) {
+        if (typeof msg !== 'object' || msg === null) {
+            return { valid: false, error: 'Invalid message format' };
+        }
+
+        const m = msg as Record<string, unknown>;
+
+        if (!('role' in m) || !('content' in m)) {
+            return { valid: false, error: 'Message missing role or content' };
+        }
+
+        // Security: Restrict roles to prevent injection
+        if (m.role !== 'user' && m.role !== 'assistant') {
+            return { valid: false, error: 'Invalid message role' };
+        }
+
+        if (typeof m.content !== 'string') {
+            return { valid: false, error: 'Message content must be a string' };
+        }
+
+        // Security: Limit content length to prevent token exhaustion
+        if (m.content.length > 1000) {
+            return { valid: false, error: 'Message content too long (max 1000 chars)' };
+        }
+    }
+
+    // Validate systemPrompt if present
+    if ('systemPrompt' in b) {
+        if (typeof b.systemPrompt !== 'string') {
+             return { valid: false, error: 'System prompt must be a string' };
+        }
+        // Security: Limit system prompt length
+        if (b.systemPrompt.length > 5000) {
+            return { valid: false, error: 'System prompt too long (max 5000 chars)' };
+        }
     }
 
     return { valid: true };
