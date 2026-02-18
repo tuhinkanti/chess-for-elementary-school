@@ -62,6 +62,8 @@ class MemoryService {
     private store: MemoryStore;
 
     constructor() {
+        // Initial load is synchronous to ensure state is available immediately.
+        // Given this happens once on app load, blocking impact is minimal.
         this.store = this.loadFromStorage();
     }
 
@@ -98,11 +100,15 @@ class MemoryService {
     }
 
     private saveToStorage(): void {
-        try {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(this.store));
-        } catch (e) {
-            console.error('Failed to save memory store:', e);
-        }
+        // Wrap storage operation in a timeout to avoid blocking the main thread (UI)
+        // This makes the write operation asynchronous from the UI perspective.
+        setTimeout(() => {
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(this.store));
+            } catch (e) {
+                console.error('Failed to save memory store:', e);
+            }
+        }, 0);
     }
 
     // ============================================

@@ -5,8 +5,41 @@ import { createOpenAI } from '@ai-sdk/openai';
 import { google } from '@ai-sdk/google';
 import { anthropic } from '@ai-sdk/anthropic';
 import { extractJson, validateTutorRequest } from '../src/utils/aiUtils.js';
+import { AI_MODELS } from '../src/config/aiConfig.js';
 
 const provider = process.env.AI_PROVIDER || 'local';
+
+// Simple in-memory rate limiting (per instance)
+const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
+const MAX_REQUESTS_PER_WINDOW = 20;
+const requestCounts = new Map<string, { count: number; expiresAt: number }>();
+
+function checkRateLimit(ip: string): boolean {
+    const now = Date.now();
+    const record = requestCounts.get(ip);
+
+    if (!record || now > record.expiresAt) {
+        requestCounts.set(ip, { count: 1, expiresAt: now + RATE_LIMIT_WINDOW });
+        return true;
+    }
+
+    if (record.count >= MAX_REQUESTS_PER_WINDOW) {
+        return false;
+    }
+
+    record.count++;
+    return true;
+}
+
+// Clean up old rate limit entries periodically
+setInterval(() => {
+    const now = Date.now();
+    for (const [ip, record] of requestCounts.entries()) {
+        if (now > record.expiresAt) {
+            requestCounts.delete(ip);
+        }
+    }
+}, RATE_LIMIT_WINDOW);
 
 interface ChatMessage {
     role: 'user' | 'assistant' | 'system';
@@ -22,19 +55,29 @@ function getModel() {
                 apiKey: 'lm-studio' // LM Studio doesn't require a real key
             });
             // Use .chat() to ensure chat completions endpoint is used
-            return lmStudio.chat('qwen3-30b-a3b-2507');
+            return lmStudio.chat(AI_MODELS.LOCAL);
         }
         case 'claude':
-            return anthropic('claude-sonnet-4-20250514');
+            return anthropic(AI_MODELS.CLAUDE);
         case 'gemini':
         default:
-            return google('gemini-2.0-flash');
+            return google(AI_MODELS.GEMINI);
     }
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method !== 'POST') {
         return res.status(405).json({ error: 'Method not allowed' });
+    }
+
+    // Rate Limiting
+    const clientIp = (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || 'unknown';
+    if (!checkRateLimit(clientIp)) {
+        return res.status(429).json({
+            error: 'Too many requests',
+            message: "Whoa, slow down! Even wizards need a break. Try again in a minute!",
+            mood: 'surprised'
+        });
     }
 
     try {
@@ -80,18 +123,20 @@ Always respond with valid JSON: {"message": "your response", "mood": "encouragin
     } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
         console.error('AI Tutor API Error:', error);
 
-        // Handle quota/rate limit errors
+        // Handle quota/rate limit errors from provider
         if (error?.message?.includes('429') || error?.message?.includes('quota')) {
-            return res.status(200).json({
+            return res.status(429).json({
+                error: 'Upstream rate limit',
                 message: "Wow, I've been thinking too much today! My magic brain needs a little rest. Try again in a minute!",
                 mood: 'thinking'
             });
         }
 
-        return res.status(200).json({
+        // Generic server error
+        return res.status(500).json({
+            error: 'Internal Server Error',
             message: "I'm having a little trouble thinking right now, but keep trying!",
             mood: 'thinking'
         });
     }
 }
-// Trigger review
