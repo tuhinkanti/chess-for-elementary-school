@@ -30,7 +30,7 @@ interface ChatMessage {
 }
 
 class ChessTutorService {
-    private apiEndpoint = '/api/tutor';
+    private apiEndpoint = import.meta.env.VITE_API_ENDPOINT || '/api/tutor';
 
     /**
      * Chat with Gloop - supports multi-turn conversations
@@ -60,6 +60,13 @@ class ChessTutorService {
             }
 
             const data = await response.json();
+
+            // Basic runtime validation
+            if (!data || typeof data !== 'object' || !('message' in data) || !('mood' in data)) {
+                console.error("Invalid AI response format:", data);
+                throw new Error("Invalid response format from AI Tutor");
+            }
+
             return data as TutorResponse;
         } catch (error: any) {
             console.error("AI Tutor Error:", error);
@@ -79,8 +86,10 @@ class ChessTutorService {
     }
 
     private constructSystemPrompt(context?: GameContext): string {
-        const studentInfo = context?.studentContext
-            ? `\n## What You Know About This Student\n${context.studentContext}\n`
+        // Truncate student context to prevent token overflow (approx 1000 chars)
+        const studentContextRaw = context?.studentContext || '';
+        const studentInfo = studentContextRaw
+            ? `\n## What You Know About This Student\n${studentContextRaw.substring(0, 1000)}${studentContextRaw.length > 1000 ? '...' : ''}\n`
             : '';
 
         const boardInfo = context?.fen
