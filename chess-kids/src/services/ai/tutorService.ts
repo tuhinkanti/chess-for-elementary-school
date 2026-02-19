@@ -30,7 +30,7 @@ interface ChatMessage {
 }
 
 class ChessTutorService {
-    private apiEndpoint = '/api/tutor';
+    private apiEndpoint = import.meta.env.VITE_API_ENDPOINT || '/api/tutor';
 
     /**
      * Chat with Gloop - supports multi-turn conversations
@@ -80,7 +80,7 @@ class ChessTutorService {
 
     private constructSystemPrompt(context?: GameContext): string {
         const studentInfo = context?.studentContext
-            ? `\n## What You Know About This Student\n${context.studentContext}\n`
+            ? `\n## What You Know About This Student\n${context.studentContext.slice(0, 2000)}\n`
             : '';
 
         const boardInfo = context?.fen
