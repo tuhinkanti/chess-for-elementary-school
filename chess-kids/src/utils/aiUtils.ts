@@ -55,5 +55,44 @@ export function validateTutorRequest(body: unknown): { valid: boolean; error?: s
         return { valid: false, error: 'Messages cannot be empty' };
     }
 
+    // Strict Security Validations
+    if (b.messages.length > 50) {
+        return { valid: false, error: 'Too many messages (max 50)' };
+    }
+
+    // System Prompt Length Check
+    if ('systemPrompt' in b && typeof b.systemPrompt === 'string') {
+        if (b.systemPrompt.length > 5000) {
+            return { valid: false, error: 'System prompt too long (max 5000 chars)' };
+        }
+    }
+
+    // Message Content Validation
+    for (const msg of b.messages) {
+        if (typeof msg !== 'object' || msg === null) {
+            return { valid: false, error: 'Invalid message format' };
+        }
+
+        const m = msg as Record<string, unknown>;
+
+        if (!('role' in m) || !('content' in m)) {
+            return { valid: false, error: 'Messages must have role and content' };
+        }
+
+        if (typeof m.content !== 'string') {
+            return { valid: false, error: 'Message content must be a string' };
+        }
+
+        if (m.content.length > 1000) {
+            return { valid: false, error: 'Message content too long (max 1000 chars)' };
+        }
+
+        // Role validation
+        // 'system' role is typically internal only, but we allow 'user' and 'assistant' from client.
+        if (typeof m.role !== 'string' || !['user', 'assistant'].includes(m.role)) {
+             return { valid: false, error: 'Invalid role (must be user or assistant)' };
+        }
+    }
+
     return { valid: true };
 }
