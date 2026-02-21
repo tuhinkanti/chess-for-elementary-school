@@ -29,8 +29,26 @@ interface ChatMessage {
     content: string;
 }
 
+function isValidTutorResponse(data: unknown): data is TutorResponse {
+    if (typeof data !== 'object' || data === null) return false;
+    const d = data as Record<string, unknown>;
+
+    // Check required fields
+    if (typeof d.message !== 'string') return false;
+    if (typeof d.mood !== 'string' || !['encouraging', 'thinking', 'surprised', 'celebrating'].includes(d.mood)) {
+        return false;
+    }
+
+    // Check optional fields if present
+    if ('highlightSquare' in d && typeof d.highlightSquare !== 'string') return false;
+    if ('drawArrow' in d && typeof d.drawArrow !== 'string') return false;
+    if ('learnedFacts' in d && !Array.isArray(d.learnedFacts)) return false;
+
+    return true;
+}
+
 class ChessTutorService {
-    private apiEndpoint = '/api/tutor';
+    private apiEndpoint = import.meta.env.VITE_API_ENDPOINT || '/api/tutor';
 
     /**
      * Chat with Gloop - supports multi-turn conversations
@@ -60,8 +78,18 @@ class ChessTutorService {
             }
 
             const data = await response.json();
-            return data as TutorResponse;
-        } catch (error: any) {
+
+            if (isValidTutorResponse(data)) {
+                return data;
+            } else {
+                console.warn('Invalid TutorResponse format:', data);
+                return {
+                    message: "I'm feeling a bit confused, let me try again!",
+                    mood: "thinking"
+                };
+            }
+
+        } catch (error: unknown) { // Use unknown instead of any
             console.error("AI Tutor Error:", error);
 
             return {
@@ -79,8 +107,15 @@ class ChessTutorService {
     }
 
     private constructSystemPrompt(context?: GameContext): string {
-        const studentInfo = context?.studentContext
-            ? `\n## What You Know About This Student\n${context.studentContext}\n`
+        // Truncate student context to prevent token overflow
+        const MAX_CONTEXT_LENGTH = 1000;
+        let studentContext = context?.studentContext || '';
+        if (studentContext.length > MAX_CONTEXT_LENGTH) {
+            studentContext = studentContext.substring(0, MAX_CONTEXT_LENGTH) + '... (truncated)';
+        }
+
+        const studentInfo = studentContext
+            ? `\n## What You Know About This Student\n${studentContext}\n`
             : '';
 
         const boardInfo = context?.fen
