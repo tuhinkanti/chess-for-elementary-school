@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowLeft, CheckCircle } from 'lucide-react';
@@ -220,6 +220,21 @@ export function LessonPage() {
   const shouldHighlightCorners = currentObjective?.validator.type === 'tap-corners';
   const showNumberPicker = currentObjective?.validator.type === 'count-confirm';
 
+  // Memoize board visualizations to prevent unnecessary re-renders
+  const highlightSquares = useMemo(() => {
+    return latestResponse?.highlightSquare ? [latestResponse.highlightSquare] : [];
+  }, [latestResponse?.highlightSquare]);
+
+  const customArrows = useMemo(() => {
+    if (!latestResponse?.drawArrow) return [];
+    const parts = latestResponse.drawArrow.split('-');
+    // Ensure we have exactly two parts for a valid arrow (start-end)
+    if (parts.length === 2) {
+      return [[parts[0], parts[1]]] as [string, string][];
+    }
+    return [];
+  }, [latestResponse?.drawArrow]);
+
   return (
     <div className="lesson-page">
       <header className="lesson-header">
@@ -271,8 +286,8 @@ export function LessonPage() {
                 fen={config.fen || undefined}
                 onMove={(from, to, piece, isCapture, newFen) => onChessMove(from, to, piece, isCapture, newFen)}
                 boardSize={Math.min(400, window.innerWidth - 40)}
-                highlightSquares={latestResponse?.highlightSquare ? [latestResponse.highlightSquare] : []}
-                customArrows={latestResponse?.drawArrow ? [latestResponse.drawArrow.split('-')] : []}
+                highlightSquares={highlightSquares}
+                customArrows={customArrows}
                 forceWhiteTurn={['piece-movement', 'capture'].includes(config.type)}
               />
             )}

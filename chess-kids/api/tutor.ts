@@ -1,41 +1,39 @@
 // API Route for AI Tutor - Vercel Serverless Function
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { generateText } from 'ai';
-import { createOpenAI } from '@ai-sdk/openai';
-import { google } from '@ai-sdk/google';
-import { anthropic } from '@ai-sdk/anthropic';
 import { extractJson, validateTutorRequest } from '../src/utils/aiUtils.js';
+import { getModel } from '../src/config/aiConfig.js';
 
 const provider = process.env.AI_PROVIDER || 'local';
+
+// Simple in-memory rate limiting (per container instance)
+const rateLimit = new Map<string, number>();
+const RATE_LIMIT_WINDOW_MS = 2000; // 2 seconds between requests
 
 interface ChatMessage {
     role: 'user' | 'assistant' | 'system';
     content: string;
 }
 
-function getModel() {
-    switch (provider) {
-        case 'local': {
-            // LM Studio runs on port 1234 by default with OpenAI-compatible API
-            const lmStudio = createOpenAI({
-                baseURL: 'http://localhost:1234/v1',
-                apiKey: 'lm-studio' // LM Studio doesn't require a real key
-            });
-            // Use .chat() to ensure chat completions endpoint is used
-            return lmStudio.chat('qwen3-30b-a3b-2507');
-        }
-        case 'claude':
-            return anthropic('claude-sonnet-4-20250514');
-        case 'gemini':
-        default:
-            return google('gemini-2.0-flash');
-    }
-}
-
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method !== 'POST') {
         return res.status(405).json({ error: 'Method not allowed' });
     }
+
+    // Rate Limiting
+    const forwarded = req.headers['x-forwarded-for'];
+    const ip = (Array.isArray(forwarded) ? forwarded[0] : forwarded) || req.socket.remoteAddress || 'unknown';
+    const now = Date.now();
+    const lastRequest = rateLimit.get(ip) || 0;
+
+    if (now - lastRequest < RATE_LIMIT_WINDOW_MS) {
+        return res.status(429).json({
+            error: 'Too many requests',
+            message: "Whoa there, slow down! Even wizards need a moment to think.",
+            mood: 'thinking'
+        });
+    }
+    rateLimit.set(ip, now);
 
     try {
         const validation = validateTutorRequest(req.body);
@@ -62,7 +60,7 @@ Always respond with valid JSON: {"message": "your response", "mood": "encouragin
         ];
 
         const { text } = await generateText({
-            model: getModel(),
+            model: getModel(provider),
             messages: fullMessages,
         });
 
@@ -80,18 +78,19 @@ Always respond with valid JSON: {"message": "your response", "mood": "encouragin
     } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
         console.error('AI Tutor API Error:', error);
 
-        // Handle quota/rate limit errors
+        // Handle quota/rate limit errors specifically if possible
         if (error?.message?.includes('429') || error?.message?.includes('quota')) {
-            return res.status(200).json({
+             return res.status(503).json({
+                error: 'Service Unavailable',
                 message: "Wow, I've been thinking too much today! My magic brain needs a little rest. Try again in a minute!",
                 mood: 'thinking'
             });
         }
 
-        return res.status(200).json({
+        return res.status(500).json({
+            error: 'Internal Server Error',
             message: "I'm having a little trouble thinking right now, but keep trying!",
             mood: 'thinking'
         });
     }
 }
-// Trigger review

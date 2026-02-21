@@ -1,12 +1,12 @@
-import { useState, useMemo } from 'react';
-import { Chessboard, type SquareHandlerArgs, type PieceDropHandlerArgs } from 'react-chessboard';
+import { useState, useMemo, useEffect } from 'react';
+import { Chessboard } from 'react-chessboard';
 import { Chess, type Square } from 'chess.js';
 
 interface ChessBoardProps {
   fen?: string;
   onMove?: (from: string, to: string, piece: string, isCapture: boolean, newFen: string) => boolean;
   highlightSquares?: string[];
-  customArrows?: string[][]; // Format: [['e2', 'e4']]
+  customArrows?: [string, string, string?][]; // Format: [['e2', 'e4', 'red']]
   interactive?: boolean;
   boardSize?: number;
   forceWhiteTurn?: boolean;
@@ -28,14 +28,26 @@ export function ChessBoard({
   const [selectedSquare, setSelectedSquare] = useState<string | null>(null);
   const [moveSquares, setMoveSquares] = useState<Record<string, React.CSSProperties>>({});
 
-  // Derived state to handle fen prop changes
-  const [prevFen, setPrevFen] = useState(fen);
-  if (fen !== prevFen) {
-    setPrevFen(fen);
-    setGame(new Chess(fen));
-    setSelectedSquare(null);
-    setMoveSquares({});
-  }
+  // Sync game state with fen prop
+  useEffect(() => {
+    if (fen) {
+      setGame((prevGame) => {
+        // Only update if FEN is different to avoid infinite loops or unnecessary resets
+        if (prevGame.fen() !== fen) {
+            try {
+                return new Chess(fen);
+            } catch (e) {
+                console.error("Invalid FEN:", fen, e);
+                return prevGame;
+            }
+        }
+        return prevGame;
+      });
+      // Reset selection when FEN changes externally
+      setSelectedSquare(null);
+      setMoveSquares({});
+    }
+  }, [fen]);
 
   const getMoveOptions = (square: Square) => {
     const moves = game.moves({ square, verbose: true });
@@ -54,22 +66,33 @@ export function ChessBoard({
     return highlights;
   };
 
-  const handleSquareClick = ({ square }: SquareHandlerArgs) => {
+  const handleSquareClick = (square: string) => {
     if (!interactive) return;
     const sq = square as Square;
 
     if (selectedSquare) {
       const moveResult = handleMove(selectedSquare, sq);
       if (!moveResult) {
-        setSelectedSquare(sq);
-        setMoveSquares(getMoveOptions(sq));
+        // If move invalid, select the new square if it has pieces
+        const piece = game.get(sq);
+        if (piece && piece.color === game.turn()) {
+            setSelectedSquare(sq);
+            setMoveSquares(getMoveOptions(sq));
+        } else {
+            setSelectedSquare(null);
+            setMoveSquares({});
+        }
       } else {
         setSelectedSquare(null);
         setMoveSquares({});
       }
     } else {
-      setSelectedSquare(sq);
-      setMoveSquares(getMoveOptions(sq));
+      // Only select if it's the player's turn (or if we allow exploring)
+      const piece = game.get(sq);
+      if (piece && piece.color === game.turn()) {
+        setSelectedSquare(sq);
+        setMoveSquares(getMoveOptions(sq));
+      }
     }
   };
 
@@ -77,15 +100,26 @@ export function ChessBoard({
     try {
       const piece = game.get(from as Square)?.type || '';
 
-      const move = game.move({ from, to, promotion: 'q' });
-      const isCapture = !!move?.captured; // Check capture flag from move result
+      // We need to clone to check valid move or just use .move() which modifies in place?
+      // chess.js .move() modifies the instance.
+      // But we should use a copy to avoid mutating state directly before setGame?
+      // Actually `game` is a reference. `const move = game.move(...)` modifies it.
+      // We should clone it first.
+      const gameCopy = new Chess(game.fen());
+
+      const move = gameCopy.move({ from, to, promotion: 'q' });
+      const isCapture = !!move?.captured;
+
       if (move) {
+        // Strict requirement: For some lessons, we force it to be White's turn again
+        // so the student can keep practicing moves without waiting for Black.
         const nextFen = forceWhiteTurn
-          ? game.fen().replace(/ [bw] /, ' w ')
-          : game.fen();
+          ? gameCopy.fen().replace(/ [bw] /, ' w ')
+          : gameCopy.fen();
 
         setGame(new Chess(nextFen));
         if (onMove) {
+          // Note: we pass nextFen. If onMove updates the `fen` prop, useEffect will handle it.
           return onMove(from, to, piece, isCapture, nextFen);
         }
         return true;
@@ -96,8 +130,8 @@ export function ChessBoard({
     return false;
   };
 
-  const onDrop = ({ sourceSquare, targetSquare }: PieceDropHandlerArgs) => {
-    if (!interactive || !targetSquare) return false;
+  const onDrop = (sourceSquare: string, targetSquare: string) => {
+    if (!interactive) return false;
     return handleMove(sourceSquare, targetSquare);
   };
 
@@ -125,29 +159,21 @@ export function ChessBoard({
     return styles;
   }, [moveSquares, selectedSquare, highlightSquares]);
 
-  const arrows = useMemo(() => {
-    return customArrows.map(arrow => ({
-      startSquare: arrow[0],
-      endSquare: arrow[1],
-      color: arrow[2] || 'orange'
-    }));
-  }, [customArrows]);
-
   return (
     <div className="chess-board-container" style={{ width: boardSize, height: boardSize }}>
       <Chessboard
-        options={{
-          position: game.fen(),
-          onPieceDrop: onDrop,
-          onSquareClick: handleSquareClick,
-          squareStyles: customSquareStyles,
-          arrows: arrows,
-          boardStyle: {
+        position={game.fen()}
+        onPieceDrop={onDrop}
+        onSquareClick={handleSquareClick}
+        customSquareStyles={customSquareStyles}
+        customArrows={customArrows}
+        boardWidth={boardSize}
+        customDarkSquareStyle={{ backgroundColor: '#779952' }}
+        customLightSquareStyle={{ backgroundColor: '#edeed1' }}
+        boardContainerStyle={{
             borderRadius: '8px',
             boxShadow: '0 8px 24px rgba(0, 0, 0, 0.3)',
-          },
-          darkSquareStyle: { backgroundColor: '#779952' },
-          lightSquareStyle: { backgroundColor: '#edeed1' },
+            overflow: 'hidden' // Ensure border radius is respected
         }}
       />
     </div>
