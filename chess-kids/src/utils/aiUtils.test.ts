@@ -59,4 +59,42 @@ describe('validateTutorRequest', () => {
   it('fails if messages array is empty', () => {
     expect(validateTutorRequest({ messages: [] })).toEqual({ valid: false, error: 'Messages cannot be empty' });
   });
+
+  // New Tests
+  it('fails if messages exceed limit', () => {
+    const messages = Array(51).fill({ role: 'user', content: 'hi' });
+    expect(validateTutorRequest({ messages })).toEqual({ valid: false, error: 'Too many messages (max 50)' });
+  });
+
+  it('fails if message content is too long', () => {
+    const longContent = 'a'.repeat(1001);
+    const messages = [{ role: 'user', content: longContent }];
+    expect(validateTutorRequest({ messages })).toEqual({ valid: false, error: 'Message too long (max 1000 chars)' });
+  });
+
+  it('fails if message role is invalid', () => {
+    const messages = [{ role: 'admin', content: 'hi' }];
+    expect(validateTutorRequest({ messages })).toEqual({ valid: false, error: 'Invalid message role' });
+  });
+
+  it('fails if message is missing role', () => {
+    const messages = [{ content: 'hi' }];
+    expect(validateTutorRequest({ messages })).toEqual({ valid: false, error: 'Invalid message role' });
+  });
+
+  it('fails if message is missing content', () => {
+    const messages = [{ role: 'user' }];
+    expect(validateTutorRequest({ messages })).toEqual({ valid: false, error: 'Invalid message content' });
+  });
+
+  it('fails if systemPrompt is too long', () => {
+    const longPrompt = 'a'.repeat(5001);
+    const messages = [{ role: 'user', content: 'hi' }];
+    expect(validateTutorRequest({ messages, systemPrompt: longPrompt })).toEqual({ valid: false, error: 'System prompt too long (max 5000 chars)' });
+  });
+
+  it('fails if systemPrompt is not a string', () => {
+    const messages = [{ role: 'user', content: 'hi' }];
+    expect(validateTutorRequest({ messages, systemPrompt: 123 })).toEqual({ valid: false, error: 'Invalid systemPrompt format' });
+  });
 });
