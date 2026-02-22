@@ -9,13 +9,11 @@
  * Provider is selected via AI_PROVIDER environment variable on the server.
  */
 
-interface TutorResponse {
-    message: string;
-    mood: "encouraging" | "thinking" | "surprised" | "celebrating";
-    highlightSquare?: string;
-    drawArrow?: string; // Format: "e2-e4"
-    learnedFacts?: string[]; // New facts learned about the student
-}
+import { TutorResponseSchema } from '../../utils/aiUtils';
+import { z } from 'zod';
+
+// Use inferred type from schema for consistency
+type TutorResponse = z.infer<typeof TutorResponseSchema>;
 
 interface GameContext {
     fen: string;
@@ -30,7 +28,7 @@ interface ChatMessage {
 }
 
 class ChessTutorService {
-    private apiEndpoint = '/api/tutor';
+    private apiEndpoint = import.meta.env.VITE_API_ENDPOINT || '/api/tutor';
 
     /**
      * Chat with Gloop - supports multi-turn conversations
@@ -56,11 +54,29 @@ class ChessTutorService {
             });
 
             if (!response.ok) {
+                if (response.status === 429) {
+                    return {
+                        message: "Wow, I've been thinking too much today! My magic brain needs a little rest. Try again in a minute!",
+                        mood: "thinking",
+                    };
+                }
                 throw new Error(`API error: ${response.status}`);
             }
 
             const data = await response.json();
-            return data as TutorResponse;
+
+            // Validate response structure
+            const result = TutorResponseSchema.safeParse(data);
+            if (!result.success) {
+                console.warn("Invalid AI response schema:", result.error);
+                // Attempt to recover partial data or fallback
+                return {
+                    message: (data as any).message || "I'm a bit confused. Can we try that again?",
+                    mood: "thinking"
+                };
+            }
+
+            return result.data;
         } catch (error: any) {
             console.error("AI Tutor Error:", error);
 
@@ -79,8 +95,15 @@ class ChessTutorService {
     }
 
     private constructSystemPrompt(context?: GameContext): string {
-        const studentInfo = context?.studentContext
-            ? `\n## What You Know About This Student\n${context.studentContext}\n`
+        // Truncate student context to prevent token overflow
+        const MAX_CONTEXT_LENGTH = 2000;
+        let safeStudentContext = context?.studentContext || '';
+        if (safeStudentContext.length > MAX_CONTEXT_LENGTH) {
+            safeStudentContext = safeStudentContext.substring(0, MAX_CONTEXT_LENGTH) + '...(truncated)';
+        }
+
+        const studentInfo = safeStudentContext
+            ? `\n## What You Know About This Student\n${safeStudentContext}\n`
             : '';
 
         const boardInfo = context?.fen

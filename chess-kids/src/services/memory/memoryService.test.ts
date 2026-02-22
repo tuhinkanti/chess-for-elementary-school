@@ -28,11 +28,6 @@ describe('MemoryService', () => {
 
     beforeEach(() => {
         localStorage.clear();
-        // Re-initialize the service to clear the internal store
-        // Since it's a singleton, we might need a way to reset it or just clear localStorage and hope for the best
-        // In memoryService.ts, the store is initialized in the constructor.
-        // To truly reset, we'd need to manually reach into the private store or re-instantiate.
-        // For now, let's reset the store manually if possible or just rely on localStorage clear.
         (memoryService as any).store = (memoryService as any).createEmptyStore();
     });
 
@@ -42,12 +37,12 @@ describe('MemoryService', () => {
         expect(facts.facts).toEqual([]);
     });
 
-    it('adds a fact correctly', () => {
+    it('adds a fact correctly', async () => {
         const factText = 'Likes to use the Queen early';
         const category = 'preference';
         const source = 'tutor-observation';
 
-        const fact = memoryService.addFact(profileId, factText, category, source);
+        const fact = await memoryService.addFact(profileId, factText, category, source);
 
         expect(fact.fact).toBe(factText);
         expect(fact.category).toBe(category);
@@ -58,20 +53,20 @@ describe('MemoryService', () => {
         expect(activeFacts[0].id).toBe(fact.id);
     });
 
-    it('accesses a fact and increments counter', () => {
-        const fact = memoryService.addFact(profileId, 'Testing access', 'milestone', 'test');
-        memoryService.accessFact(profileId, fact.id);
+    it('accesses a fact and increments counter', async () => {
+        const fact = await memoryService.addFact(profileId, 'Testing access', 'milestone', 'test');
+        await memoryService.accessFact(profileId, fact.id);
 
         const facts = memoryService.getStudentFacts(profileId).facts;
         const updatedFact = facts.find(f => f.id === fact.id);
         expect(updatedFact?.accessCount).toBe(2);
     });
 
-    it('supersedes a fact correctly', () => {
-        const oldFact = memoryService.addFact(profileId, 'Thinks pawns are weak', 'skill-gap', 'test');
+    it('supersedes a fact correctly', async () => {
+        const oldFact = await memoryService.addFact(profileId, 'Thinks pawns are weak', 'skill-gap', 'test');
         const newFactText = 'Learned that pawns are the soul of chess';
 
-        const newFact = memoryService.supersedeFact(profileId, oldFact.id, newFactText);
+        const newFact = await memoryService.supersedeFact(profileId, oldFact.id, newFactText);
 
         const facts = memoryService.getStudentFacts(profileId).facts;
         const oldFactObj = facts.find(f => f.id === oldFact.id);
@@ -82,10 +77,10 @@ describe('MemoryService', () => {
         expect(memoryService.getActiveFacts(profileId).length).toBe(1);
     });
 
-    it('generates a summary correctly', () => {
-        memoryService.addFact(profileId, 'Strong at endgame', 'strength', 'test');
-        memoryService.addFact(profileId, 'Forgets to castle', 'skill-gap', 'test');
-        memoryService.addFact(profileId, 'Prefers visual hints', 'preference', 'test');
+    it('generates a summary correctly', async () => {
+        await memoryService.addFact(profileId, 'Strong at endgame', 'strength', 'test');
+        await memoryService.addFact(profileId, 'Forgets to castle', 'skill-gap', 'test');
+        await memoryService.addFact(profileId, 'Prefers visual hints', 'preference', 'test');
 
         const summary = memoryService.getStudentSummary(profileId);
 
@@ -94,9 +89,9 @@ describe('MemoryService', () => {
         expect(summary.summary.preferredHintStyle).toBe('visual');
     });
 
-    it('generates context for AI prompt', () => {
-        memoryService.addFact(profileId, 'Strong with Knights', 'strength', 'test');
-        memoryService.addRule('Never call a piece "bad"');
+    it('generates context for AI prompt', async () => {
+        await memoryService.addFact(profileId, 'Strong with Knights', 'strength', 'test');
+        await memoryService.addRule('Never call a piece "bad"');
 
         const context = memoryService.getContextForAI(profileId);
 
@@ -105,23 +100,26 @@ describe('MemoryService', () => {
         expect(context).toContain('Never call a piece "bad"');
     });
 
-    it('handles fact decay (mocking time)', () => {
+    it('handles fact decay (mocking time)', async () => {
         vi.useFakeTimers();
 
-        const fact = memoryService.addFact(profileId, 'Old fact', 'milestone', 'test');
+        // Set a fixed start time
+        const start = new Date(2023, 0, 1).getTime();
+        vi.setSystemTime(start);
+
+        // Start the addFact operation (which includes a setTimeout)
+        const promise = memoryService.addFact(profileId, 'Old fact', 'milestone', 'test');
+
+        // Advance timer to trigger the setTimeout(0)
+        await vi.advanceTimersByTimeAsync(10);
+
+        const fact = await promise;
 
         // Advance time by 40 days (Cold tier is > 30 days)
         const fortyDaysInMs = 40 * 24 * 60 * 60 * 1000;
-        vi.advanceTimersByTime(fortyDaysInMs);
+        vi.setSystemTime(start + fortyDaysInMs);
 
-        // We need to update the lastAccessed manually or simulate the passage of time another way
-        // since the service uses Date.now() internally at the time of check usually, 
-        // but the daysSince function in memoryService.ts uses the fact.lastAccessed string.
-
-        // Let's manually set the lastAccessed to 40 days ago
-        const pastDate = new Date(Date.now() - fortyDaysInMs).toISOString();
-        fact.lastAccessed = pastDate;
-
+        // Check tier - MemoryService calculates decay based on Date.now() vs fact.lastAccessed
         const tieredFacts = memoryService.getTieredFacts(profileId);
         expect(tieredFacts[0].tier).toBe('cold');
 

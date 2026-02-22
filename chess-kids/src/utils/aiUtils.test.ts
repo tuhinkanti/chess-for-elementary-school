@@ -44,19 +44,32 @@ describe('validateTutorRequest', () => {
   });
 
   it('fails if body is missing', () => {
-    expect(validateTutorRequest(null)).toEqual({ valid: false, error: 'Invalid request body' });
-    expect(validateTutorRequest(undefined)).toEqual({ valid: false, error: 'Invalid request body' });
+    // Zod error for null input is specific
+    const result = validateTutorRequest(null);
+    expect(result.valid).toBe(false);
+    expect(result.error).toContain('Expected object, received null');
+
+    const result2 = validateTutorRequest(undefined);
+    expect(result2.valid).toBe(false);
+    // undefined might result in "Required" at root or similar
+    expect(result2.error).toBeTruthy();
   });
 
   it('fails if messages is missing', () => {
-    expect(validateTutorRequest({})).toEqual({ valid: false, error: 'Messages are required' });
+    const result = validateTutorRequest({});
+    expect(result.valid).toBe(false);
+    expect(result.error).toContain('messages: Required');
   });
 
   it('fails if messages is not an array', () => {
-    expect(validateTutorRequest({ messages: 'not-array' })).toEqual({ valid: false, error: 'Messages must be an array' });
+    const result = validateTutorRequest({ messages: 'not-array' });
+    expect(result.valid).toBe(false);
+    expect(result.error).toContain('messages: Expected array');
   });
 
   it('fails if messages array is empty', () => {
-    expect(validateTutorRequest({ messages: [] })).toEqual({ valid: false, error: 'Messages cannot be empty' });
+    const result = validateTutorRequest({ messages: [] });
+    expect(result.valid).toBe(false);
+    expect(result.error).toContain('Messages cannot be empty');
   });
 });
