@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { tutorService, type GameContext } from './tutorService';
+import { constructSystemPrompt } from '../../utils/aiUtils';
 
 describe('TutorService', () => {
     beforeEach(() => {
@@ -15,8 +16,8 @@ describe('TutorService', () => {
             studentContext: 'Student likes to play fast.',
         };
 
-        // Access private method for testing purpose
-        const prompt = (tutorService as any).constructSystemPrompt(context);
+        // Access utility function directly
+        const prompt = constructSystemPrompt(context);
 
         expect(prompt).toContain('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1');
         expect(prompt).toContain('Learn to move pawns');
@@ -30,7 +31,7 @@ describe('TutorService', () => {
             mood: 'encouraging' as const,
         };
 
-        (global.fetch as any).mockResolvedValue({
+        (global.fetch as any).mockResolvedValue({ // eslint-disable-line @typescript-eslint/no-explicit-any
             ok: true,
             json: async () => mockAdvice,
         });
@@ -46,7 +47,7 @@ describe('TutorService', () => {
     });
 
     it('handles AI errors gracefully with a fallback', async () => {
-        (global.fetch as any).mockRejectedValue(new Error('API Failure'));
+        (global.fetch as any).mockRejectedValue(new Error('API Failure')); // eslint-disable-line @typescript-eslint/no-explicit-any
 
         const context: GameContext = {
             fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
@@ -59,7 +60,7 @@ describe('TutorService', () => {
     });
 
     it('handles invalid JSON from AI gracefully', async () => {
-        (global.fetch as any).mockResolvedValue({
+        (global.fetch as any).mockResolvedValue({ // eslint-disable-line @typescript-eslint/no-explicit-any
             ok: true,
             json: async () => { throw new Error('Invalid JSON'); },
         });

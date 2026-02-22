@@ -4,7 +4,7 @@ import { generateText } from 'ai';
 import { createOpenAI } from '@ai-sdk/openai';
 import { google } from '@ai-sdk/google';
 import { anthropic } from '@ai-sdk/anthropic';
-import { extractJson, validateTutorRequest } from '../src/utils/aiUtils.js';
+import { extractJson, validateTutorRequest, constructSystemPrompt, GameContext } from '../src/utils/aiUtils.js';
 
 const provider = process.env.AI_PROVIDER || 'local';
 
@@ -43,15 +43,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             return res.status(400).json({ error: validation.error });
         }
 
-        const { messages, systemPrompt } = req.body as {
+        const { messages, context } = req.body as {
             messages: ChatMessage[];
-            systemPrompt?: string;
+            context?: GameContext;
         };
 
         // Build the full prompt with system context and conversation history
-        const systemMessage = systemPrompt || `You are Grandmaster Gloop, a friendly chess tutor for a 7-year-old.
-Be encouraging, concise, and explain things simply.
-Always respond with valid JSON: {"message": "your response", "mood": "encouraging"|"thinking"|"surprised"|"celebrating"}`;
+        // Security: We construct the prompt server-side to prevent prompt injection via 'systemPrompt' in body
+        const systemMessage = constructSystemPrompt(context);
 
         // Security: Filter out any client-supplied 'system' messages to prevent prompt injection
         const safeMessages = messages.filter(m => m.role !== 'system');
@@ -94,4 +93,3 @@ Always respond with valid JSON: {"message": "your response", "mood": "encouragin
         });
     }
 }
-// Trigger review
