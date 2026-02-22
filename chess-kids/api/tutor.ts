@@ -1,35 +1,37 @@
 // API Route for AI Tutor - Vercel Serverless Function
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { generateText } from 'ai';
-import { createOpenAI } from '@ai-sdk/openai';
-import { google } from '@ai-sdk/google';
-import { anthropic } from '@ai-sdk/anthropic';
+import { getModel } from '../src/config/aiConfig.js';
 import { extractJson, validateTutorRequest } from '../src/utils/aiUtils.js';
-
-const provider = process.env.AI_PROVIDER || 'local';
 
 interface ChatMessage {
     role: 'user' | 'assistant' | 'system';
     content: string;
 }
 
-function getModel() {
-    switch (provider) {
-        case 'local': {
-            // LM Studio runs on port 1234 by default with OpenAI-compatible API
-            const lmStudio = createOpenAI({
-                baseURL: 'http://localhost:1234/v1',
-                apiKey: 'lm-studio' // LM Studio doesn't require a real key
-            });
-            // Use .chat() to ensure chat completions endpoint is used
-            return lmStudio.chat('qwen3-30b-a3b-2507');
-        }
-        case 'claude':
-            return anthropic('claude-sonnet-4-20250514');
-        case 'gemini':
-        default:
-            return google('gemini-2.0-flash');
+// Simple in-memory rate limiting (Note: resets on function cold start)
+// For production, use Redis/Upstash
+const rateLimitMap = new Map<string, number>();
+const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
+const MAX_REQUESTS_PER_WINDOW = 20; // Allow enough for a session
+
+function checkRateLimit(ip: string): boolean {
+    const now = Date.now();
+    const windowKey = `${ip}:${Math.floor(now / RATE_LIMIT_WINDOW)}`;
+    const count = rateLimitMap.get(windowKey) || 0;
+
+    if (count >= MAX_REQUESTS_PER_WINDOW) {
+        return false;
     }
+
+    rateLimitMap.set(windowKey, count + 1);
+
+    // Cleanup to prevent memory leak
+    if (rateLimitMap.size > 1000) {
+        rateLimitMap.clear();
+    }
+
+    return true;
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -38,6 +40,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     try {
+        // Rate limiting
+        const clientIp = (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || 'unknown';
+        if (!checkRateLimit(clientIp)) {
+            return res.status(429).json({
+                error: 'Too many requests. Please try again later.',
+                mood: 'thinking'
+            });
+        }
+
         const validation = validateTutorRequest(req.body);
         if (!validation.valid) {
             return res.status(400).json({ error: validation.error });
@@ -82,16 +93,15 @@ Always respond with valid JSON: {"message": "your response", "mood": "encouragin
 
         // Handle quota/rate limit errors
         if (error?.message?.includes('429') || error?.message?.includes('quota')) {
-            return res.status(200).json({
+            return res.status(429).json({
                 message: "Wow, I've been thinking too much today! My magic brain needs a little rest. Try again in a minute!",
                 mood: 'thinking'
             });
         }
 
-        return res.status(200).json({
+        return res.status(500).json({
             message: "I'm having a little trouble thinking right now, but keep trying!",
             mood: 'thinking'
         });
     }
 }
-// Trigger review

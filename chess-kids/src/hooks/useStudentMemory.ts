@@ -6,18 +6,18 @@ interface UseStudentMemoryReturn {
     // Facts
     getActiveFacts: () => AtomicFact[];
     getHotAndWarmFacts: () => TieredFact[];
-    addFact: (fact: string, category: FactCategory, source: string) => AtomicFact;
-    accessFact: (factId: string) => void;
+    addFact: (fact: string, category: FactCategory, source: string, relatedEntities?: string[]) => Promise<AtomicFact>;
+    accessFact: (factId: string) => Promise<void>;
 
     // Summary
     getSummary: () => StudentSummary;
-    regenerateSummary: () => StudentSummary;
+    regenerateSummary: () => Promise<StudentSummary>;
 
     // Sessions
-    startSession: (lessonId: number) => void;
-    endSession: () => void;
-    recordObjectiveCompleted: (objectiveId: string) => void;
-    recordTutorInteraction: (type: 'arrow' | 'highlight' | 'message', context: string, response: string) => void;
+    startSession: (lessonId: number) => Promise<void>;
+    endSession: () => Promise<void>;
+    recordObjectiveCompleted: (objectiveId: string) => Promise<void>;
+    recordTutorInteraction: (type: 'arrow' | 'highlight' | 'message', context: string, response: string) => Promise<void>;
 
     // AI Context
     getContextForAI: () => string;
@@ -34,40 +34,40 @@ export function useStudentMemory(profileId: string | undefined): UseStudentMemor
         return memoryService.getHotAndWarmFacts(safeProfileId);
     }, [safeProfileId]);
 
-    const addFact = useCallback((fact: string, category: FactCategory, source: string) => {
-        return memoryService.addFact(safeProfileId, fact, category, source);
+    const addFact = useCallback(async (fact: string, category: FactCategory, source: string, relatedEntities?: string[]) => {
+        return await memoryService.addFact(safeProfileId, fact, category, source, relatedEntities);
     }, [safeProfileId]);
 
-    const accessFact = useCallback((factId: string) => {
-        memoryService.accessFact(safeProfileId, factId);
+    const accessFact = useCallback(async (factId: string) => {
+        await memoryService.accessFact(safeProfileId, factId);
     }, [safeProfileId]);
 
     const getSummary = useCallback(() => {
         return memoryService.getStudentSummary(safeProfileId);
     }, [safeProfileId]);
 
-    const regenerateSummary = useCallback(() => {
-        return memoryService.regenerateSummary(safeProfileId);
+    const regenerateSummary = useCallback(async () => {
+        return await memoryService.regenerateSummary(safeProfileId);
     }, [safeProfileId]);
 
-    const startSession = useCallback((lessonId: number) => {
-        memoryService.startSession(safeProfileId, lessonId);
+    const startSession = useCallback(async (lessonId: number) => {
+        await memoryService.startSession(safeProfileId, lessonId);
     }, [safeProfileId]);
 
-    const endSession = useCallback(() => {
-        memoryService.endSession(safeProfileId);
+    const endSession = useCallback(async () => {
+        await memoryService.endSession(safeProfileId);
     }, [safeProfileId]);
 
-    const recordObjectiveCompleted = useCallback((objectiveId: string) => {
-        memoryService.recordObjectiveCompleted(safeProfileId, objectiveId);
+    const recordObjectiveCompleted = useCallback(async (objectiveId: string) => {
+        await memoryService.recordObjectiveCompleted(safeProfileId, objectiveId);
     }, [safeProfileId]);
 
-    const recordTutorInteraction = useCallback((
+    const recordTutorInteraction = useCallback(async (
         type: 'arrow' | 'highlight' | 'message',
         context: string,
         response: string
     ) => {
-        memoryService.recordTutorInteraction(safeProfileId, type, context, response);
+        await memoryService.recordTutorInteraction(safeProfileId, type, context, response);
     }, [safeProfileId]);
 
     const getContextForAI = useCallback(() => {

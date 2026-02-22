@@ -1,3 +1,5 @@
+import { z } from 'zod';
+
 export function extractJson(text: string): unknown {
     if (!text || typeof text !== 'string') {
         return null;
@@ -34,26 +36,32 @@ export function extractJson(text: string): unknown {
     }
 }
 
+export const TutorRequestSchema = z.object({
+    messages: z.array(z.object({
+        role: z.enum(['user', 'assistant', 'system']),
+        content: z.string(),
+    })).min(1, 'Messages cannot be empty'),
+    systemPrompt: z.string().optional(),
+});
+
+export const TutorResponseSchema = z.object({
+    message: z.string(),
+    mood: z.enum(["encouraging", "thinking", "surprised", "celebrating"]),
+    highlightSquare: z.string().optional(),
+    drawArrow: z.string().optional(),
+    learnedFacts: z.array(z.string()).optional(),
+});
+
+/**
+ * Validates the tutor request body using Zod schema.
+ * Returns validation result compatible with previous implementation but powered by Zod.
+ */
 export function validateTutorRequest(body: unknown): { valid: boolean; error?: string } {
-    if (!body || typeof body !== 'object') {
-        return { valid: false, error: 'Invalid request body' };
+    const result = TutorRequestSchema.safeParse(body);
+    if (!result.success) {
+        // Format the error message
+        const errors = result.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ');
+        return { valid: false, error: errors };
     }
-
-    // Check if messages exists and is an array
-    // We cast to any for check, or use type guard
-    const b = body as Record<string, unknown>;
-
-    if (!('messages' in b)) {
-        return { valid: false, error: 'Messages are required' };
-    }
-
-    if (!Array.isArray(b.messages)) {
-         return { valid: false, error: 'Messages must be an array' };
-    }
-
-    if (b.messages.length === 0) {
-        return { valid: false, error: 'Messages cannot be empty' };
-    }
-
     return { valid: true };
 }
