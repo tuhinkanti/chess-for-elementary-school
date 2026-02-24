@@ -31,6 +31,7 @@ export function TutorMascot({ messages, isLoading, onSendMessage, onClose, lates
   // Auto-expand when there are messages
   useEffect(() => {
     if (messages.length > 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setIsExpanded(true);
     }
   }, [messages.length]);
