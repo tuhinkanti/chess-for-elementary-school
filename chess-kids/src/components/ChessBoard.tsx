@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Chessboard, type SquareHandlerArgs, type PieceDropHandlerArgs } from 'react-chessboard';
 import { Chess, type Square } from 'chess.js';
 
@@ -6,7 +6,7 @@ interface ChessBoardProps {
   fen?: string;
   onMove?: (from: string, to: string, piece: string, isCapture: boolean, newFen: string) => boolean;
   highlightSquares?: string[];
-  customArrows?: string[][]; // Format: [['e2', 'e4']]
+  customArrows?: [string, string][]; // Fixed type
   interactive?: boolean;
   boardSize?: number;
   forceWhiteTurn?: boolean;
@@ -24,18 +24,23 @@ export function ChessBoard({
   forceWhiteTurn = false,
 }: ChessBoardProps) {
   const [game, setGame] = useState(() => new Chess(fen));
-
   const [selectedSquare, setSelectedSquare] = useState<string | null>(null);
   const [moveSquares, setMoveSquares] = useState<Record<string, React.CSSProperties>>({});
 
-  // Derived state to handle fen prop changes
-  const [prevFen, setPrevFen] = useState(fen);
-  if (fen !== prevFen) {
-    setPrevFen(fen);
-    setGame(new Chess(fen));
-    setSelectedSquare(null);
-    setMoveSquares({});
-  }
+  // Use useEffect to sync internal game state when fen prop changes
+  useEffect(() => {
+    if (fen) {
+        try {
+            const newGame = new Chess(fen);
+            // eslint-disable-next-line react-hooks/set-state-in-effect
+            setGame(newGame);
+            setSelectedSquare(null);
+            setMoveSquares({});
+        } catch (e) {
+            console.error('Invalid FEN:', fen, e);
+        }
+    }
+  }, [fen]);
 
   const getMoveOptions = (square: Square) => {
     const moves = game.moves({ square, verbose: true });
@@ -84,7 +89,18 @@ export function ChessBoard({
           ? game.fen().replace(/ [bw] /, ' w ')
           : game.fen();
 
-        setGame(new Chess(nextFen));
+        // If we force turn, we need to update the game instance to reflect it immediately
+        if (forceWhiteTurn) {
+             const forcedGame = new Chess(nextFen);
+             setGame(forcedGame);
+        } else {
+             // For normal moves, React state update will happen via onMove callback -> parent updates fen prop -> useEffect
+             // But for immediate feedback, we update local state too.
+             // Actually, if parent updates `fen`, useEffect triggers re-render.
+             // If we update here too, it might be redundant but safe.
+             setGame(new Chess(nextFen));
+        }
+
         if (onMove) {
           return onMove(from, to, piece, isCapture, nextFen);
         }
@@ -125,30 +141,32 @@ export function ChessBoard({
     return styles;
   }, [moveSquares, selectedSquare, highlightSquares]);
 
+  // Convert customArrows to the format react-chessboard expects if necessary
+  // react-chessboard v5+ expects [start, end, color?]
+  // Our prop is [string, string][]
   const arrows = useMemo(() => {
-    return customArrows.map(arrow => ({
-      startSquare: arrow[0],
-      endSquare: arrow[1],
-      color: arrow[2] || 'orange'
-    }));
+    return customArrows.map(arrow => [
+      arrow[0],
+      arrow[1],
+      'orange' // Default color since our prop is just pairs
+    ] as [string, string, string]);
   }, [customArrows]);
 
   return (
     <div className="chess-board-container" style={{ width: boardSize, height: boardSize }}>
       <Chessboard
-        options={{
-          position: game.fen(),
-          onPieceDrop: onDrop,
-          onSquareClick: handleSquareClick,
-          squareStyles: customSquareStyles,
-          arrows: arrows,
-          boardStyle: {
+        position={game.fen()}
+        onPieceDrop={onDrop}
+        onSquareClick={handleSquareClick}
+        customSquareStyles={customSquareStyles}
+        customArrows={arrows}
+        boardWidth={boardSize}
+        customBoardStyle={{
             borderRadius: '8px',
             boxShadow: '0 8px 24px rgba(0, 0, 0, 0.3)',
-          },
-          darkSquareStyle: { backgroundColor: '#779952' },
-          lightSquareStyle: { backgroundColor: '#edeed1' },
         }}
+        customDarkSquareStyle={{ backgroundColor: '#779952' }}
+        customLightSquareStyle={{ backgroundColor: '#edeed1' }}
       />
     </div>
   );

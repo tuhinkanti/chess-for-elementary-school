@@ -9,13 +9,8 @@
  * Provider is selected via AI_PROVIDER environment variable on the server.
  */
 
-interface TutorResponse {
-    message: string;
-    mood: "encouraging" | "thinking" | "surprised" | "celebrating";
-    highlightSquare?: string;
-    drawArrow?: string; // Format: "e2-e4"
-    learnedFacts?: string[]; // New facts learned about the student
-}
+import { API_ENDPOINT } from '../../config/aiConfig';
+import { TutorResponseSchema, type TutorResponse } from '../../utils/aiUtils';
 
 interface GameContext {
     fen: string;
@@ -30,7 +25,7 @@ interface ChatMessage {
 }
 
 class ChessTutorService {
-    private apiEndpoint = '/api/tutor';
+    private apiEndpoint = API_ENDPOINT;
 
     /**
      * Chat with Gloop - supports multi-turn conversations
@@ -60,8 +55,19 @@ class ChessTutorService {
             }
 
             const data = await response.json();
-            return data as TutorResponse;
-        } catch (error: any) {
+
+            const validation = TutorResponseSchema.safeParse(data);
+            if (!validation.success) {
+                console.warn('Invalid Tutor Response:', validation.error);
+                // Fallback for partial/invalid responses to avoid crashing UI
+                return {
+                    message: "I'm having a little trouble thinking right now, but keep trying!",
+                    mood: "thinking"
+                };
+            }
+
+            return validation.data;
+        } catch (error: unknown) {
             console.error("AI Tutor Error:", error);
 
             return {
@@ -79,8 +85,13 @@ class ChessTutorService {
     }
 
     private constructSystemPrompt(context?: GameContext): string {
-        const studentInfo = context?.studentContext
-            ? `\n## What You Know About This Student\n${context.studentContext}\n`
+        // Truncate student context to prevent token overflow
+        const truncatedContext = context?.studentContext
+            ? context.studentContext.slice(0, 1000)
+            : '';
+
+        const studentInfo = truncatedContext
+            ? `\n## What You Know About This Student\n${truncatedContext}\n`
             : '';
 
         const boardInfo = context?.fen
