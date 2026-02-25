@@ -1,79 +1,138 @@
 # Detailed Code Review: Chess Kids Project
 
-This document outlines a comprehensive review of the `chess-kids` codebase, focusing on correctness, TypeScript best practices, code quality, performance, error handling, and adherence to DRY/SOLID principles.
+This document outlines a comprehensive review of the `chess-kids` codebase, focusing on security, correctness, best practices, and maintainability.
 
-## 1. Backend: `chess-kids/api/tutor.ts`
+## 1. Critical Security Vulnerability: Prompt Injection
 
-### Findings
+### Finding
+The backend API endpoint (`api/tutor.ts`) and the local development server (`server.js`) are vulnerable to **Prompt Injection**. The code accepts a `systemPrompt` field directly from the request body and uses it to construct the AI's system message.
 
-*   **Logic & Security**: `JSON.parse(text)` is used directly on the AI response. If the AI wraps the output in markdown code blocks (e.g., `json ... `), parsing will fail.
-    *   **Suggestion**: Implement a robust JSON extraction utility (e.g., regex to find the first `{` and last `}`) before parsing.
-*   **Security**: No rate limiting or authentication is implemented. This leaves the API vulnerable to abuse.
-    *   **Suggestion**: Implement rate limiting (e.g., using Upstash or a simple counter if state persistence allows) and basic authentication or token verification.
-*   **TypeScript**: `req.body` is cast using `as { ... }` without validation.
-    *   **Suggestion**: Use a runtime validation library like `zod` to validate the incoming request body structure and types.
-*   **Error Handling**: The `try...catch` block catches `any` error but logs minimal context.
-    *   **Suggestion**: Implement structured logging and distinguish between client errors (400) and server errors (500).
-*   **Code Quality**: The `getModel` function contains hardcoded model strings.
-    *   **Suggestion**: Move model configurations to a separate constant or environment variable configuration file.
+**Location:** `chess-kids/api/tutor.ts` and `chess-kids/server.js`
 
-## 2. Component: `chess-kids/src/components/ChessBoard.tsx`
+```typescript
+const { messages, systemPrompt } = req.body;
+// ...
+const systemMessage = systemPrompt || `You are Grandmaster Gloop...`;
+```
 
-### Findings
+### Impact
+A malicious user can override the system prompt entirely by sending a custom `systemPrompt` in the JSON body. This allows them to bypass safety filters, change the AI's persona, or extract sensitive instructions.
 
-*   **TypeScript / React**: The `customArrows` prop is typed as `string[][]` but the usage in `ChessBoard` casts it to `any` and passes it to `react-chessboard`. The `react-chessboard` library (v5+) expects `[string, string][]`.
-    *   **Suggestion**: Correct the interface to `customArrows?: [string, string][]` and remove the `as any` cast. Ensure strict typing throughout.
-*   **React Best Practices**: The component uses the "derived state" pattern (`if (fen !== prevFen) ...`) inside the render body to sync `chess.js` state. This causes an immediate re-render and is generally discouraged.
-    *   **Suggestion**: Use `useEffect(() => { ... }, [fen])` to update the internal `chess.js` instance, or better yet, lift the game state up to the parent component entirely to avoid duplication. Alternatively, use a `key` prop on the component to force a remount when `fen` changes if state reset is desired.
-*   **Logic**: The `handleMove` function calculates `whiteTurnFen` by replacing the turn indicator. This forces White to move next, which is incorrect for general chess logic unless specifically intended for "White to play" puzzles only.
-    *   **Suggestion**: Remove the manual turn manipulation unless strictly required by the game design. Allow `chess.js` to handle turn alternation naturally.
-*   **React / Performance**: The `options` prop is passed to `Chessboard`. This is deprecated in newer versions of `react-chessboard`.
-    *   **Suggestion**: Pass props directly to the `Chessboard` component (e.g., `position={game.fen()}`, `onPieceDrop={onDrop}`).
+### Recommendation
+*   **Remove client-side control:** Do not accept `systemPrompt` from the client request body. The system prompt should be defined exclusively on the server side.
+*   **Validate input:** Ensure `req.body` only contains the expected `messages` array and strictly validate its structure.
 
-## 3. Service: `chess-kids/src/services/ai/tutorService.ts`
+## 2. Frontend Logic & React Anti-Patterns
 
-### Findings
+### Finding A: Derived State in Render Body (`ChessBoard.tsx`)
+The `ChessBoard` component updates state directly within the render function body when props change.
 
-*   **Logic**: The `constructSystemPrompt` method includes `context.studentContext` directly. If the student context (memory) grows large, this could exceed token limits or degrade model performance.
-    *   **Suggestion**: Implement a truncation strategy or summarization step for `studentContext` before injecting it into the prompt.
-*   **TypeScript**: The `chat` method returns `data as TutorResponse`. This is an unsafe cast.
-    *   **Suggestion**: Use `zod` to validate the response structure at runtime to ensuring it matches the `TutorResponse` interface.
-*   **Security**: The API endpoint `/api/tutor` is hardcoded.
-    *   **Suggestion**: Use an environment variable (e.g., `import.meta.env.VITE_API_ENDPOINT`) to configure the endpoint, allowing for different environments (dev/prod).
+**Location:** `chess-kids/src/components/ChessBoard.tsx`
 
-## 4. Page: `chess-kids/src/pages/LessonPage.tsx`
+```typescript
+if (fen !== prevFen) {
+    setPrevFen(fen);
+    setGame(new Chess(fen));
+    // ...
+}
+```
 
-### Findings
+### Impact
+This pattern causes an immediate re-render every time `fen` changes, which can lead to performance issues and unpredictable behavior. React's strict mode may trigger this multiple times.
 
-*   **Performance**: `highlightSquares` and `customArrows` props passed to `ChessBoard` are created as new arrays on every render:
+### Recommendation
+*   **Use `useEffect`:** Move the state synchronization logic into a `useEffect` hook dependent on `[fen]`.
     ```typescript
-    highlightSquares={latestResponse?.highlightSquare ? [latestResponse.highlightSquare] : []}
-    customArrows={latestResponse?.drawArrow ? [latestResponse.drawArrow.split('-')] : []}
+    useEffect(() => {
+        setGame(new Chess(fen));
+        setSelectedSquare(null);
+        setMoveSquares({});
+    }, [fen]);
     ```
-    This breaks the `useMemo` optimization inside `ChessBoard`, causing unnecessary re-renders.
-    *   **Suggestion**: Memoize these arrays using `useMemo` in `LessonPage` before passing them to `ChessBoard`.
-*   **TypeScript / Logic**: `latestResponse.drawArrow.split('-')` returns `string[]`, but `ChessBoard` expects `[string, string]`.
-    *   **Suggestion**: Validate the split result length before passing it. e.g., `const arrows = ...; arrows.length === 2 ? [arrows as [string, string]] : []`.
-*   **Logic**: `handleMistake` depends on `memory`. Ensure `useStudentMemory` returns a stable object reference to prevent `handleMistake` from being recreated on every render, which would trigger the `useEffect` dependent on it. (Verified: `useStudentMemory` uses `useMemo`, so this is likely fine, but worth monitoring).
+*   **Lift State:** Ideally, lift the game state up to the parent component (`LessonPage`) to avoid duplicating state between `fen` prop and internal `game` object.
 
-## 5. Service: `chess-kids/src/services/memory/memoryService.ts`
+### Finding B: Race Conditions in Chat (`useChessTutor.ts`)
+The `sendMessage` function uses a stale closure variable `updatedMessages` when updating state after an async API call.
 
-### Findings
+**Location:** `chess-kids/src/hooks/useChessTutor.ts`
 
-*   **Performance**: The service uses synchronous `localStorage` operations (`JSON.parse`, `JSON.stringify`) for every read/write. As the memory grows, this will block the main thread and cause UI jank.
-    *   **Suggestion**: Move storage operations to an asynchronous model (e.g., `IndexedDB` via `idb` library) or wrap `localStorage` access in asynchronous logic (though `localStorage` itself is sync). For a serious application, `IndexedDB` is recommended.
-*   **TypeScript**: The `addFact` method signature in the interface (implied) vs implementation might have discrepancies regarding optional parameters.
-    *   **Suggestion**: Ensure the interface explicitly defines optional parameters (`?`) matching the implementation's default values.
+```typescript
+const updatedMessages = [...messages, newUserMessage];
+setMessages(updatedMessages);
+// ... await API call ...
+setMessages([...updatedMessages, assistantMessage]);
+```
 
-## 6. Configuration: `chess-kids/package.json`
+### Impact
+If the user sends another message while the AI is thinking, the `messages` state will update, but `updatedMessages` inside the closure remains the old version. When the API response returns, it will overwrite the newer messages with the old state plus the assistant's reply, causing message loss.
 
-### Findings
+### Recommendation
+*   **Functional Updates:** Use the functional form of `setMessages` to ensure updates are based on the latest state.
+    ```typescript
+    setMessages(prev => [...prev, assistantMessage]);
+    ```
 
-*   **Dependencies**: `express` and `cors` are listed in `devDependencies`. If the application uses a custom server (`server.js`) in production, these must be in `dependencies`.
-    *   **Suggestion**: Move `express` and `cors` to `dependencies`.
+## 3. Backend Logic & Architecture
 
-## General Recommendations
+### Finding A: Code Duplication
+The core AI logic (model selection, provider configuration) is duplicated between `server.js` (for local dev) and `api/tutor.ts` (for production).
 
-*   **Environment Variables**: Consolidate all environment variables (API keys, endpoints, model names) into a single configuration file or typed object to prevent magic strings scattered across the codebase.
-*   **Error Boundaries**: Implement React Error Boundaries around major components (like `LessonPage` or `ChessBoard`) to catch runtime errors gracefully without crashing the entire app.
-*   **Accessibility**: Ensure all interactive elements (buttons, inputs) have `aria-label` or visible labels. The `TutorMascot` and `ChessBoard` should be verified for keyboard navigation support.
+### Impact
+Changes to model configuration or logic must be applied in two places, increasing the risk of inconsistency and bugs.
+
+### Recommendation
+*   **Shared Utility:** Extract the model configuration and provider logic into a shared utility file (e.g., `src/utils/aiConfig.ts`) that can be imported by both environments.
+
+### Finding B: Hardcoded Secrets
+API keys and URLs (e.g., `lm-studio`, `localhost:1234`) are hardcoded in `server.js` and `api/tutor.ts`.
+
+### Recommendation
+*   **Environment Variables:** Use `process.env` for all sensitive values and configuration endpoints. Create a `.env.example` file to document required variables.
+
+## 4. Performance: Synchronous Storage
+
+### Finding
+The `MemoryService` uses synchronous `localStorage` operations for all data persistence.
+
+**Location:** `chess-kids/src/services/memory/memoryService.ts`
+
+```typescript
+private saveToStorage(): void {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(this.store));
+}
+```
+
+### Impact
+As the student's memory grows (facts, history), serializing and writing the entire store synchronously will block the main thread, causing UI freezes (jank) during auto-saves.
+
+### Recommendation
+*   **Asynchronous Storage:** Switch to an asynchronous storage solution like `IndexedDB` (using a wrapper like `idb-keyval`) to keep the main thread responsive.
+*   **Debouncing:** Implement debouncing for save operations to reduce the frequency of writes.
+
+## 5. Maintainability: Inline Styles
+
+### Finding
+The `TutorMascot` component contains a large block of inline CSS within a `<style>` tag.
+
+**Location:** `chess-kids/src/components/TutorMascot.tsx`
+
+### Impact
+This makes the component harder to read and maintain. Syntax highlighting and linting for CSS are lost, and styles are not reusable.
+
+### Recommendation
+*   **CSS Modules / External File:** Move the styles to a separate `TutorMascot.module.css` or `TutorMascot.css` file.
+
+## 6. Type Safety
+
+### Finding
+The code uses `any` in several places, particularly in error handling and API response parsing.
+
+**Example:** `catch (error: any)` in `api/tutor.ts`.
+
+### Recommendation
+*   **Structured Error Handling:** Define a custom error type or use `unknown` with type guards to safely handle errors.
+*   **Zod Validation:** Use a runtime validation library like `zod` to validate API responses instead of unchecked type assertions (`as TutorResponse`).
+
+---
+
+**End of Review**
