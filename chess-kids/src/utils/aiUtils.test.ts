@@ -1,5 +1,25 @@
 import { describe, it, expect } from 'vitest';
-import { extractJson, validateTutorRequest } from './aiUtils';
+import { extractJson, validateTutorRequest, constructSystemPrompt, GameContext } from './aiUtils';
+
+describe('constructSystemPrompt', () => {
+  it('generates a prompt with student context', () => {
+    const context: GameContext = {
+      fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
+      studentContext: 'Student loves knights.',
+      lessonObjective: 'Control the center',
+    };
+    const prompt = constructSystemPrompt(context);
+    expect(prompt).toContain('Student loves knights');
+    expect(prompt).toContain('Control the center');
+    expect(prompt).toContain('Current Board (FEN)');
+  });
+
+  it('generates a prompt without context', () => {
+    const prompt = constructSystemPrompt();
+    expect(prompt).toContain('You are Grandmaster Gloop');
+    expect(prompt).not.toContain('## What You Know About This Student');
+  });
+});
 
 describe('extractJson', () => {
   it('parses valid JSON string', () => {
