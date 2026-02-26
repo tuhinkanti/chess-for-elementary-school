@@ -9,35 +9,21 @@
  * Provider is selected via AI_PROVIDER environment variable on the server.
  */
 
-interface TutorResponse {
-    message: string;
-    mood: "encouraging" | "thinking" | "surprised" | "celebrating";
-    highlightSquare?: string;
-    drawArrow?: string; // Format: "e2-e4"
-    learnedFacts?: string[]; // New facts learned about the student
-}
-
-interface GameContext {
-    fen: string;
-    lastMove?: string; // PGN notation or UCI
-    lessonObjective?: string;
-    studentContext?: string; // Memory-based context about the student
-}
-
-interface ChatMessage {
-    role: 'user' | 'assistant';
-    content: string;
-}
+import {
+    type TutorResponse,
+    type GameContext,
+    type ChatMessage,
+    TutorResponseSchema
+} from '../../utils/aiUtils';
 
 class ChessTutorService {
-    private apiEndpoint = '/api/tutor';
+    // Use environment variable for endpoint, defaulting to relative path
+    private apiEndpoint = import.meta.env.VITE_API_ENDPOINT || '/api/tutor';
 
     /**
      * Chat with Gloop - supports multi-turn conversations
      */
     async chat(messages: ChatMessage[], context?: GameContext): Promise<TutorResponse> {
-        const systemPrompt = this.constructSystemPrompt(context);
-
         // Convert chat messages to API format
         const apiMessages = messages.length > 0
             ? messages.map(m => ({ role: m.role, content: m.content }))
@@ -51,7 +37,7 @@ class ChessTutorService {
                 },
                 body: JSON.stringify({
                     messages: apiMessages,
-                    systemPrompt
+                    context // Send context to server for prompt construction
                 }),
             });
 
@@ -60,7 +46,26 @@ class ChessTutorService {
             }
 
             const data = await response.json();
-            return data as TutorResponse;
+
+            // Validate response using Zod
+            const result = TutorResponseSchema.safeParse(data);
+            if (!result.success) {
+                console.warn("Invalid TutorResponse format:", result.error);
+                // Fallback or re-throw?
+                // Since data might still be usable (e.g. just message), we could try to salvage,
+                // but strictly we should ensure it matches.
+                // For robustness, if 'message' and 'mood' exist, we might accept it, but safeParse is strict.
+                // Let's return a safe fallback if validation fails but log the error.
+                return {
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    message: (data as any).message || "I'm having a little trouble speaking clearly right now.",
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    mood: (data as any).mood || "thinking"
+                } as TutorResponse;
+            }
+
+            return result.data;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } catch (error: any) {
             console.error("AI Tutor Error:", error);
 
@@ -76,41 +81,6 @@ class ChessTutorService {
      */
     async getAdvice(context: GameContext): Promise<TutorResponse> {
         return this.chat([], context);
-    }
-
-    private constructSystemPrompt(context?: GameContext): string {
-        const studentInfo = context?.studentContext
-            ? `\n## What You Know About This Student\n${context.studentContext}\n`
-            : '';
-
-        const boardInfo = context?.fen
-            ? `\nCurrent Board (FEN): ${context.fen}\nLast Move: ${context.lastMove || "None"}`
-            : '';
-
-        return `
-You are Grandmaster Gloop, a friendly, magical chess tutor for a 7-year-old.
-${studentInfo}
-Goal: Help the student with their current lesson in a fun, encouraging way.
-Objective: ${context?.lessonObjective || "Play a good move"}
-${boardInfo}
-
-Instructions:
-1. Be encouraging, concise, and use simple words.
-2. If the user made a mistake, explain WHY plainly (no complex notation).
-3. Reference what you know about the student's strengths and struggles if relevant.
-4. Keep responses SHORT - 1-3 sentences max for young learners.
-5. Identify NEW facts about the student based on this interaction (e.g., "Student struggles with knights", "Student likes visual hints") and include them in 'learnedFacts'.
-6. Always respond with valid JSON.
-
-Response format:
-{
-  "message": string (your friendly response),
-  "mood": "encouraging" | "thinking" | "surprised" | "celebrating",
-  "highlightSquare": string (optional),
-  "drawArrow": string (optional "e2-e4"),
-  "learnedFacts": string[] (optional list of new observations)
-}
-    `.trim();
     }
 }
 

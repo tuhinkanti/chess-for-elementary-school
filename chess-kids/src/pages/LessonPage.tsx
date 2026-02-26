@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowLeft, CheckCircle } from 'lucide-react';
@@ -22,6 +22,7 @@ import { useProfile } from '../hooks/useProfile';
 import { useChessTutor } from '../hooks/useChessTutor';
 import { useStudentMemory } from '../hooks/useStudentMemory';
 import { TutorMascot } from '../components/TutorMascot';
+import '../styles/LessonPage.css';
 
 export function LessonPage() {
   const { id } = useParams<{ id: string }>();
@@ -68,12 +69,6 @@ export function LessonPage() {
   useEffect(() => {
     if (latestResponse?.learnedFacts && latestResponse.learnedFacts.length > 0) {
       latestResponse.learnedFacts.forEach(fact => {
-        // We categorize broadly as 'skill-gap' or 'preference' if possible, but 'general' fallback is okay.
-        // Since the prompt asks for strengths/weaknesses, we'll try to guess or just use a default.
-        // For now, let's assume if the AI noticed it, it's worth noting as a 'skill-gap' or 'strength'.
-        // We'll use a generic 'preference' category or modify memory to accept 'observation'.
-        // Using 'skill-gap' as a safe default for "struggles", but it might be a strength.
-        // Let's use 'preference' for now as a catch-all for "observed traits".
         memory.addFact(fact, 'preference', 'tutor');
       });
     }
@@ -87,9 +82,6 @@ export function LessonPage() {
 
     // Record the mistake so the AI knows
     memory.recordTutorInteraction('message', `Mistake: ${context}`, 'system');
-    
-    // Also add a temporary fact about the struggle if it's specific
-    // memory.addFact(`Struggled with ${context}`, 'skill-gap', 'system');
   }, [memory]);
 
   // Check for objective completion whenever lessonState changes
@@ -212,6 +204,21 @@ export function LessonPage() {
     }
   };
 
+  // Memoized props for ChessBoard to prevent re-renders
+  const highlightSquares = useMemo(() => {
+      return latestResponse?.highlightSquare ? [latestResponse.highlightSquare] : [];
+  }, [latestResponse]);
+
+  const customArrows = useMemo<[string, string][]>(() => {
+      if (!latestResponse?.drawArrow) return [];
+      const parts = latestResponse.drawArrow.split('-');
+      // Validate format e2-e4
+      if (parts.length === 2 && parts[0].length === 2 && parts[1].length === 2) {
+          return [parts as [string, string]];
+      }
+      return [];
+  }, [latestResponse]);
+
   if (!lesson || !config || !currentProfile) {
     return <div>Lesson not found</div>;
   }
@@ -271,8 +278,8 @@ export function LessonPage() {
                 fen={config.fen || undefined}
                 onMove={(from, to, piece, isCapture, newFen) => onChessMove(from, to, piece, isCapture, newFen)}
                 boardSize={Math.min(400, window.innerWidth - 40)}
-                highlightSquares={latestResponse?.highlightSquare ? [latestResponse.highlightSquare] : []}
-                customArrows={latestResponse?.drawArrow ? [latestResponse.drawArrow.split('-')] : []}
+                highlightSquares={highlightSquares}
+                customArrows={customArrows}
                 forceWhiteTurn={['piece-movement', 'capture'].includes(config.type)}
               />
             )}
@@ -334,43 +341,6 @@ export function LessonPage() {
         onClose={clearChat}
         latestMood={latestResponse?.mood}
       />
-
-      <style>{`
-        .objectives-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 1rem;
-        }
-        .ask-tutor-button {
-          background: var(--secondary);
-          color: white;
-          border: none;
-          padding: 8px 16px;
-          border-radius: 20px;
-          font-weight: bold;
-          cursor: pointer;
-          transition: transform 0.2s;
-          box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-        }
-        .ask-tutor-button:hover {
-          transform: translateY(-2px);
-          filter: brightness(1.1);
-        }
-        .ask-tutor-button:disabled {
-          opacity: 0.7;
-          cursor: wait;
-        }
-        .shake {
-          animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
-        }
-        @keyframes shake {
-          10%, 90% { transform: translate3d(-1px, 0, 0); }
-          20%, 80% { transform: translate3d(2px, 0, 0); }
-          30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
-          40%, 60% { transform: translate3d(4px, 0, 0); }
-        }
-      `}</style>
     </div>
   );
 }

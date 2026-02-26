@@ -40,23 +40,33 @@ describe('extractJson', () => {
 describe('validateTutorRequest', () => {
   it('validates correct request body with content', () => {
     const body = { messages: [{ role: 'user', content: 'hi' }] };
-    expect(validateTutorRequest(body)).toEqual({ valid: true });
+    expect(validateTutorRequest(body)).toEqual({
+      valid: true,
+      data: { messages: [{ role: 'user', content: 'hi' }] }
+    });
   });
 
   it('fails if body is missing', () => {
-    expect(validateTutorRequest(null)).toEqual({ valid: false, error: 'Invalid request body' });
-    expect(validateTutorRequest(undefined)).toEqual({ valid: false, error: 'Invalid request body' });
+    const result = validateTutorRequest(null);
+    expect(result.valid).toBe(false);
+    expect(result.error).toContain('received null');
   });
 
   it('fails if messages is missing', () => {
-    expect(validateTutorRequest({})).toEqual({ valid: false, error: 'Messages are required' });
+    const result = validateTutorRequest({});
+    expect(result.valid).toBe(false);
+    expect(result.error).toContain('Required');
   });
 
   it('fails if messages is not an array', () => {
-    expect(validateTutorRequest({ messages: 'not-array' })).toEqual({ valid: false, error: 'Messages must be an array' });
+    const result = validateTutorRequest({ messages: 'not-array' });
+    expect(result.valid).toBe(false);
+    expect(result.error).toContain('Expected array');
   });
 
   it('fails if messages array is empty', () => {
-    expect(validateTutorRequest({ messages: [] })).toEqual({ valid: false, error: 'Messages cannot be empty' });
+    const result = validateTutorRequest({ messages: [] });
+    expect(result.valid).toBe(false);
+    expect(result.error).toContain('Array must contain at least 1 element');
   });
 });
