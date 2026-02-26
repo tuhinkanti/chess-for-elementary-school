@@ -98,11 +98,14 @@ class MemoryService {
     }
 
     private saveToStorage(): void {
-        try {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(this.store));
-        } catch (e) {
-            console.error('Failed to save memory store:', e);
-        }
+        // Wrap in setTimeout to avoid blocking main thread with synchronous IO (even if localStorage is sync)
+        setTimeout(() => {
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(this.store));
+            } catch (e) {
+                console.error('Failed to save memory store:', e);
+            }
+        }, 0);
     }
 
     // ============================================
