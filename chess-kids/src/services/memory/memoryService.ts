@@ -99,7 +99,10 @@ class MemoryService {
 
     private saveToStorage(): void {
         try {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(this.store));
+            // Use setTimeout to avoid blocking the main thread during heavy operations
+            setTimeout(() => {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(this.store));
+            }, 0);
         } catch (e) {
             console.error('Failed to save memory store:', e);
         }

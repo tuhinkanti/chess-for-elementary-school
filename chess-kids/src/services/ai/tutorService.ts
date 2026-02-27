@@ -9,13 +9,18 @@
  * Provider is selected via AI_PROVIDER environment variable on the server.
  */
 
-interface TutorResponse {
-    message: string;
-    mood: "encouraging" | "thinking" | "surprised" | "celebrating";
-    highlightSquare?: string;
-    drawArrow?: string; // Format: "e2-e4"
-    learnedFacts?: string[]; // New facts learned about the student
-}
+import { z } from 'zod';
+import { AI_CONFIG } from '../../config/aiConfig';
+
+const TutorResponseSchema = z.object({
+    message: z.string(),
+    mood: z.enum(["encouraging", "thinking", "surprised", "celebrating"]),
+    highlightSquare: z.string().optional(),
+    drawArrow: z.string().optional(), // Format: "e2-e4"
+    learnedFacts: z.array(z.string()).optional(),
+});
+
+type TutorResponse = z.infer<typeof TutorResponseSchema>;
 
 interface GameContext {
     fen: string;
@@ -30,7 +35,8 @@ interface ChatMessage {
 }
 
 class ChessTutorService {
-    private apiEndpoint = '/api/tutor';
+    // Use the centralized endpoint configuration
+    private apiEndpoint = AI_CONFIG.apiEndpoint;
 
     /**
      * Chat with Gloop - supports multi-turn conversations
@@ -56,11 +62,30 @@ class ChessTutorService {
             });
 
             if (!response.ok) {
+                if (response.status === 429) {
+                     return {
+                        message: "Wow, I've been thinking too much today! My magic brain needs a little rest. Try again in a minute!",
+                        mood: 'thinking'
+                    };
+                }
                 throw new Error(`API error: ${response.status}`);
             }
 
             const data = await response.json();
-            return data as TutorResponse;
+
+            // Validate response structure
+            const parseResult = TutorResponseSchema.safeParse(data);
+            if (!parseResult.success) {
+                 console.error("Invalid API response format:", parseResult.error);
+                 // Fallback if parsing fails but we have something
+                 return {
+                     message: data.message || "I'm a bit confused, but I'm here to help!",
+                     mood: "thinking"
+                 };
+            }
+
+            return parseResult.data;
+
         } catch (error: any) {
             console.error("AI Tutor Error:", error);
 
@@ -79,9 +104,11 @@ class ChessTutorService {
     }
 
     private constructSystemPrompt(context?: GameContext): string {
-        const studentInfo = context?.studentContext
-            ? `\n## What You Know About This Student\n${context.studentContext}\n`
-            : '';
+        // Truncate student context to prevent token overflow (approx 1000 chars)
+        const rawStudentContext = context?.studentContext || '';
+        const studentInfo = rawStudentContext.length > 1000
+            ? `\n## What You Know About This Student\n${rawStudentContext.substring(0, 1000)}...\n`
+            : (rawStudentContext ? `\n## What You Know About This Student\n${rawStudentContext}\n` : '');
 
         const boardInfo = context?.fen
             ? `\nCurrent Board (FEN): ${context.fen}\nLast Move: ${context.lastMove || "None"}`
