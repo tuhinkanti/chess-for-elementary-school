@@ -1,0 +1,4 @@
+## 2024-05-24 - DoS Prevention in LLM Interfaces
+**Vulnerability:** The `validateTutorRequest` function only checked if `messages` was an array, allowing an attacker to send an unlimited number of messages or messages with massive content. This could lead to Denial of Service (DoS) by exhausting server memory or token limits of the LLM provider.
+**Learning:** Checking types is not enough; limits must be enforced on data structures that can grow arbitrarily (arrays, strings). This is especially critical for endpoints that forward data to expensive or rate-limited third-party services (like LLMs).
+**Prevention:** Always define and enforce `MAX_ITEMS` and `MAX_LENGTH` constants for all user-submitted arrays and strings. Fail fast with a clear error message before processing or forwarding the data.
