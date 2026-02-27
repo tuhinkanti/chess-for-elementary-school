@@ -1,36 +1,20 @@
 // API Route for AI Tutor - Vercel Serverless Function
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { generateText } from 'ai';
-import { createOpenAI } from '@ai-sdk/openai';
-import { google } from '@ai-sdk/google';
-import { anthropic } from '@ai-sdk/anthropic';
-import { extractJson, validateTutorRequest } from '../src/utils/aiUtils.js';
+import { extractJson } from '../src/utils/aiUtils.js';
+import { getModel, AI_CONFIG, type AIProvider } from '../src/config/aiConfig.js';
+import { z } from 'zod';
 
-const provider = process.env.AI_PROVIDER || 'local';
+// Validation Schema
+const MessageSchema = z.object({
+    role: z.enum(['user', 'assistant', 'system']),
+    content: z.string().min(1).max(2000), // Enforce reasonable length
+});
 
-interface ChatMessage {
-    role: 'user' | 'assistant' | 'system';
-    content: string;
-}
-
-function getModel() {
-    switch (provider) {
-        case 'local': {
-            // LM Studio runs on port 1234 by default with OpenAI-compatible API
-            const lmStudio = createOpenAI({
-                baseURL: 'http://localhost:1234/v1',
-                apiKey: 'lm-studio' // LM Studio doesn't require a real key
-            });
-            // Use .chat() to ensure chat completions endpoint is used
-            return lmStudio.chat('qwen3-30b-a3b-2507');
-        }
-        case 'claude':
-            return anthropic('claude-sonnet-4-20250514');
-        case 'gemini':
-        default:
-            return google('gemini-2.0-flash');
-    }
-}
+const RequestSchema = z.object({
+    messages: z.array(MessageSchema).min(1).max(50),
+    systemPrompt: z.string().optional(),
+});
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method !== 'POST') {
@@ -38,15 +22,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     try {
-        const validation = validateTutorRequest(req.body);
-        if (!validation.valid) {
-            return res.status(400).json({ error: validation.error });
+        // Validate Request Body
+        const parseResult = RequestSchema.safeParse(req.body);
+        if (!parseResult.success) {
+            return res.status(400).json({
+                error: 'Invalid request',
+                details: parseResult.error.format()
+            });
         }
 
-        const { messages, systemPrompt } = req.body as {
-            messages: ChatMessage[];
-            systemPrompt?: string;
-        };
+        const { messages, systemPrompt } = parseResult.data;
 
         // Build the full prompt with system context and conversation history
         const systemMessage = systemPrompt || `You are Grandmaster Gloop, a friendly chess tutor for a 7-year-old.
@@ -61,8 +46,11 @@ Always respond with valid JSON: {"message": "your response", "mood": "encouragin
             ...safeMessages
         ];
 
+        // Use the centralized model configuration
+        const model = getModel(process.env.AI_PROVIDER as AIProvider || AI_CONFIG.provider);
+
         const { text } = await generateText({
-            model: getModel(),
+            model,
             messages: fullMessages,
         });
 
@@ -77,21 +65,21 @@ Always respond with valid JSON: {"message": "your response", "mood": "encouragin
             message: text,
             mood: 'encouraging'
         });
+
     } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
         console.error('AI Tutor API Error:', error);
 
         // Handle quota/rate limit errors
         if (error?.message?.includes('429') || error?.message?.includes('quota')) {
-            return res.status(200).json({
+            return res.status(429).json({
                 message: "Wow, I've been thinking too much today! My magic brain needs a little rest. Try again in a minute!",
                 mood: 'thinking'
             });
         }
 
-        return res.status(200).json({
+        return res.status(500).json({
             message: "I'm having a little trouble thinking right now, but keep trying!",
             mood: 'thinking'
         });
     }
 }
-// Trigger review

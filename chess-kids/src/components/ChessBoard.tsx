@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Chessboard, type SquareHandlerArgs, type PieceDropHandlerArgs } from 'react-chessboard';
 import { Chess, type Square } from 'chess.js';
 
@@ -6,7 +6,7 @@ interface ChessBoardProps {
   fen?: string;
   onMove?: (from: string, to: string, piece: string, isCapture: boolean, newFen: string) => boolean;
   highlightSquares?: string[];
-  customArrows?: string[][]; // Format: [['e2', 'e4']]
+  customArrows?: [string, string][]; // Format: [['e2', 'e4']]
   interactive?: boolean;
   boardSize?: number;
   forceWhiteTurn?: boolean;
@@ -28,14 +28,23 @@ export function ChessBoard({
   const [selectedSquare, setSelectedSquare] = useState<string | null>(null);
   const [moveSquares, setMoveSquares] = useState<Record<string, React.CSSProperties>>({});
 
-  // Derived state to handle fen prop changes
-  const [prevFen, setPrevFen] = useState(fen);
-  if (fen !== prevFen) {
-    setPrevFen(fen);
-    setGame(new Chess(fen));
-    setSelectedSquare(null);
-    setMoveSquares({});
-  }
+  // Sync internal game state with incoming FEN prop
+  useEffect(() => {
+    // Avoid creating new Chess instance if FEN hasn't effectively changed
+    // We compare against current game state
+    if (fen && fen !== game.fen()) {
+        try {
+            // This setGame triggers a re-render. This is unavoidable when syncing props to state.
+            const newGame = new Chess(fen);
+            setGame(newGame);
+            setSelectedSquare(null);
+            setMoveSquares({});
+        } catch (e) {
+            console.error("Invalid FEN provided:", fen, e);
+        }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fen]);
 
   const getMoveOptions = (square: Square) => {
     const moves = game.moves({ square, verbose: true });
@@ -61,6 +70,8 @@ export function ChessBoard({
     if (selectedSquare) {
       const moveResult = handleMove(selectedSquare, sq);
       if (!moveResult) {
+        // If move invalid, select new square if it has a piece
+        // Or if clicking same square, deselect? The original logic re-selected.
         setSelectedSquare(sq);
         setMoveSquares(getMoveOptions(sq));
       } else {
@@ -80,11 +91,21 @@ export function ChessBoard({
       const move = game.move({ from, to, promotion: 'q' });
       const isCapture = !!move?.captured; // Check capture flag from move result
       if (move) {
+        // If forceWhiteTurn is true, we manipulate the FEN to make it white's turn again.
+        // This is used for "Piece Movement" lessons where continuous moves are needed without an opponent.
         const nextFen = forceWhiteTurn
           ? game.fen().replace(/ [bw] /, ' w ')
           : game.fen();
 
-        setGame(new Chess(nextFen));
+        // If we manipulated the turn, we need to update the game instance to reflect that
+        // so the next move is valid from the correct side.
+        if (forceWhiteTurn) {
+            setGame(new Chess(nextFen));
+        } else {
+            // Otherwise just keep the current game state which has advanced the turn
+            setGame(new Chess(game.fen()));
+        }
+
         if (onMove) {
           return onMove(from, to, piece, isCapture, nextFen);
         }
@@ -129,26 +150,25 @@ export function ChessBoard({
     return customArrows.map(arrow => ({
       startSquare: arrow[0],
       endSquare: arrow[1],
-      color: arrow[2] || 'orange'
+      color: 'orange' // Default arrow color since the tuple is now just [string, string]
     }));
   }, [customArrows]);
 
   return (
     <div className="chess-board-container" style={{ width: boardSize, height: boardSize }}>
       <Chessboard
-        options={{
-          position: game.fen(),
-          onPieceDrop: onDrop,
-          onSquareClick: handleSquareClick,
-          squareStyles: customSquareStyles,
-          arrows: arrows,
-          boardStyle: {
-            borderRadius: '8px',
-            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.3)',
-          },
-          darkSquareStyle: { backgroundColor: '#779952' },
-          lightSquareStyle: { backgroundColor: '#edeed1' },
+        position={game.fen()}
+        onPieceDrop={onDrop}
+        onSquareClick={handleSquareClick}
+        squareStyles={customSquareStyles}
+        arrows={arrows}
+        boardWidth={boardSize}
+        customBoardStyle={{
+           borderRadius: '8px',
+           boxShadow: '0 8px 24px rgba(0, 0, 0, 0.3)',
         }}
+        customDarkSquareStyle={{ backgroundColor: '#779952' }}
+        customLightSquareStyle={{ backgroundColor: '#edeed1' }}
       />
     </div>
   );
