@@ -33,7 +33,7 @@ export function ExploreBoard({
     const baseColor = isLight ? '#f0f1d8' : '#88a65e';
     const tappedColor = isLight ? '#fff59d' : '#cbd86a';
 
-    let background = isTapped ? tappedColor : baseColor;
+    const background = isTapped ? tappedColor : baseColor;
     let boxShadow = 'none';
     let borderColor = 'transparent';
 

@@ -1,0 +1,44 @@
+
+> chess-kids@0.0.0 lint
+> eslint .
+
+
+/app/chess-kids/src/components/Celebration.tsx
+  1:1  warning  Unused eslint-disable directive (no problems were reported from 'react-hooks/purity')
+
+/app/chess-kids/src/components/ExploreBoard.tsx
+  36:9  error  'background' is never reassigned. Use 'const' instead  prefer-const
+
+/app/chess-kids/src/components/TutorMascot.tsx
+  34:7  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/app/chess-kids/src/components/TutorMascot.tsx:34:7
+  32 |   useEffect(() => {
+  33 |     if (messages.length > 0) {
+> 34 |       setIsExpanded(true);
+     |       ^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  35 |     }
+  36 |   }, [messages.length]);
+  37 |  react-hooks/set-state-in-effect
+
+/app/chess-kids/src/services/ai/tutorService.test.ts
+  19:41  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  33:26  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  49:26  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  62:26  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/app/chess-kids/src/services/ai/tutorService.ts
+  64:25  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/app/chess-kids/src/services/memory/memoryService.test.ts
+  36:27  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  36:58  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+✖ 10 problems (9 errors, 1 warning)
+  1 error and 1 warning potentially fixable with the `--fix` option.
