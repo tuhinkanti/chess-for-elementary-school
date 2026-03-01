@@ -31,7 +31,7 @@ export function TutorMascot({ messages, isLoading, onSendMessage, onClose, lates
   // Auto-expand when there are messages
   useEffect(() => {
     if (messages.length > 0) {
-      setIsExpanded(true);
+      setTimeout(() => setIsExpanded(true), 0);
     }
   }, [messages.length]);
 
