@@ -55,5 +55,31 @@ export function validateTutorRequest(body: unknown): { valid: boolean; error?: s
         return { valid: false, error: 'Messages cannot be empty' };
     }
 
+    // DoS / Token Exhaustion Prevention
+    if (b.messages.length > 50) {
+        return { valid: false, error: 'Messages exceed maximum allowed limit (50)' };
+    }
+
+    // Validate each message content
+    for (const msg of b.messages) {
+        if (!msg || typeof msg !== 'object') {
+            return { valid: false, error: 'Invalid message object' };
+        }
+
+        const msgObj = msg as Record<string, unknown>;
+
+        if (!('role' in msgObj) || typeof msgObj.role !== 'string' || !['user', 'assistant', 'system'].includes(msgObj.role)) {
+            return { valid: false, error: 'Invalid or missing role in message' };
+        }
+
+        if (!('content' in msgObj) || typeof msgObj.content !== 'string') {
+            return { valid: false, error: 'Invalid or missing content in message' };
+        }
+
+        if (msgObj.content.length > 1000) {
+            return { valid: false, error: 'Message content exceeds maximum allowed length (1000 characters)' };
+        }
+    }
+
     return { valid: true };
 }
