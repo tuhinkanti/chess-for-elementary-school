@@ -8,20 +8,35 @@ describe('TutorService', () => {
         global.fetch = vi.fn();
     });
 
-    it('constructs a prompt correctly with student context', async () => {
+    it('sends the correct payload to the server', async () => {
         const context: GameContext = {
             fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
             lessonObjective: 'Learn to move pawns',
             studentContext: 'Student likes to play fast.',
         };
 
-        // Access private method for testing purpose
-        const prompt = (tutorService as any).constructSystemPrompt(context);
+        const mockAdvice = {
+            message: 'Great job! Try moving your e-pawn forward.',
+            mood: 'encouraging',
+        };
 
-        expect(prompt).toContain('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1');
-        expect(prompt).toContain('Learn to move pawns');
-        expect(prompt).toContain('Student likes to play fast.');
-        expect(prompt).toContain('Grandmaster Gloop');
+        (global.fetch as any).mockResolvedValue({
+            ok: true,
+            json: async () => mockAdvice,
+        });
+
+        await tutorService.chat([{ role: 'user', content: 'test' }], context);
+
+        expect(global.fetch).toHaveBeenCalledWith(
+            '/api/tutor',
+            expect.objectContaining({
+                method: 'POST',
+                body: JSON.stringify({
+                    messages: [{ role: 'user', content: 'test' }],
+                    context: context
+                })
+            })
+        );
     });
 
     it('returns advice from AI correctly', async () => {
