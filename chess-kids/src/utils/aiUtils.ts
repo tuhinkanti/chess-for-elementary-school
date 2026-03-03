@@ -68,7 +68,7 @@ export function validateTutorRequest(body: unknown): { valid: boolean; error?: s
 
         const msgObj = msg as Record<string, unknown>;
 
-        if (!('role' in msgObj) || typeof msgObj.role !== 'string' || !['user', 'assistant', 'system'].includes(msgObj.role)) {
+        if (!('role' in msgObj) || typeof msgObj.role !== 'string' || !['user', 'assistant'].includes(msgObj.role)) {
             return { valid: false, error: 'Invalid or missing role in message' };
         }
 
