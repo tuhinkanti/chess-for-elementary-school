@@ -18,7 +18,7 @@ interface TutorMascotProps {
 
 export function TutorMascot({ messages, isLoading, onSendMessage, onClose, latestMood }: TutorMascotProps) {
   const [inputValue, setInputValue] = useState('');
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isExpanded] = useState(false);
   const chatContainerRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll to bottom when new messages arrive
@@ -28,12 +28,6 @@ export function TutorMascot({ messages, isLoading, onSendMessage, onClose, lates
     }
   }, [messages]);
 
-  // Auto-expand when there are messages
-  useEffect(() => {
-    if (messages.length > 0) {
-      setIsExpanded(true);
-    }
-  }, [messages.length]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,13 +46,14 @@ export function TutorMascot({ messages, isLoading, onSendMessage, onClose, lates
 
   const mood = latestMood || 'encouraging';
   const hasMessages = messages.length > 0;
+  const expanded = isExpanded || hasMessages;
 
   return (
     <div className="tutor-container">
       <AnimatePresence>
         {(isLoading || hasMessages) && (
           <motion.div
-            className={`tutor-mascot-wrapper ${isExpanded ? 'expanded' : ''}`}
+            className={`tutor-mascot-wrapper ${expanded ? 'expanded' : ''}`}
             initial={{ opacity: 0, x: 50, scale: 0.8 }}
             animate={{ opacity: 1, x: 0, scale: 1 }}
             exit={{ opacity: 0, x: 50, scale: 0.8 }}
