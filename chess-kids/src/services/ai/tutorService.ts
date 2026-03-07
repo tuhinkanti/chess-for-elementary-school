@@ -61,7 +61,7 @@ class ChessTutorService {
 
             const data = await response.json();
             return data as TutorResponse;
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error("AI Tutor Error:", error);
 
             return {
