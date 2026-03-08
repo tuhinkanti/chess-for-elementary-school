@@ -1,76 +1,66 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { tutorService, type GameContext } from './tutorService';
+import { tutorService } from './tutorService';
+import type { GameContext } from '../../utils/aiUtils';
 
-describe('TutorService', () => {
+// Mock fetch
+global.fetch = vi.fn();
+
+describe('ChessTutorService', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        // Mock global fetch
-        global.fetch = vi.fn();
     });
 
-    it('constructs a prompt correctly with student context', async () => {
-        const context: GameContext = {
-            fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
-            lessonObjective: 'Learn to move pawns',
-            studentContext: 'Student likes to play fast.',
+    it('should format requests correctly', async () => {
+        const mockResponse = {
+            message: "Great move!",
+            mood: "celebrating",
+            highlightSquare: "e4"
         };
 
-        // Access private method for testing purpose
-        const prompt = (tutorService as any).constructSystemPrompt(context);
-
-        expect(prompt).toContain('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1');
-        expect(prompt).toContain('Learn to move pawns');
-        expect(prompt).toContain('Student likes to play fast.');
-        expect(prompt).toContain('Grandmaster Gloop');
-    });
-
-    it('returns advice from AI correctly', async () => {
-        const mockAdvice = {
-            message: 'Great job! Try moving your e-pawn forward.',
-            mood: 'encouraging' as const,
-        };
-
-        (global.fetch as any).mockResolvedValue({
+        (global.fetch as any).mockResolvedValueOnce({
             ok: true,
-            json: async () => mockAdvice,
+            json: async () => mockResponse,
         });
 
         const context: GameContext = {
-            fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
+            fen: 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1',
+            lastMove: 'e4',
+            lessonObjective: 'Control the center'
         };
 
         const advice = await tutorService.getAdvice(context);
 
-        expect(advice).toEqual(mockAdvice);
-        expect(global.fetch).toHaveBeenCalledWith('/api/tutor', expect.anything());
+        expect(global.fetch).toHaveBeenCalledWith('/api/tutor', expect.objectContaining({
+            method: 'POST',
+            body: JSON.stringify({
+                messages: [{ role: 'user', content: 'Help me with this chess position!' }],
+                context
+            })
+        }));
+
+        expect(advice).toEqual(mockResponse);
     });
 
-    it('handles AI errors gracefully with a fallback', async () => {
-        (global.fetch as any).mockRejectedValue(new Error('API Failure'));
+    it('should handle API errors gracefully', async () => {
+        (global.fetch as any).mockRejectedValueOnce(new Error('Network error'));
 
-        const context: GameContext = {
-            fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
-        };
-
+        const context: GameContext = { fen: 'start' };
         const advice = await tutorService.getAdvice(context);
 
-        expect(advice.message).toContain("I'm having a little trouble thinking");
         expect(advice.mood).toBe('thinking');
+        expect(advice.message).toContain('trouble thinking');
     });
 
-    it('handles invalid JSON from AI gracefully', async () => {
-        (global.fetch as any).mockResolvedValue({
-            ok: true,
-            json: async () => { throw new Error('Invalid JSON'); },
+    it('should handle non-ok HTTP responses', async () => {
+        (global.fetch as any).mockResolvedValueOnce({
+            ok: false,
+            status: 500
         });
 
-        const context: GameContext = {
-            fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
-        };
-
+        const context: GameContext = { fen: 'start' };
         const advice = await tutorService.getAdvice(context);
 
-        expect(advice.message).toContain("I'm having a little trouble thinking");
         expect(advice.mood).toBe('thinking');
+        expect(advice.message).toContain('trouble thinking');
     });
 });
