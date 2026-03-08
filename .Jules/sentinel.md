@@ -1,0 +1,4 @@
+## 2024-03-08 - [CRITICAL] Fix Prompt Injection Vulnerability in AI Tutor API
+**Vulnerability:** The AI Tutor API (`/api/tutor` and `server.js`) accepted a user-supplied `systemPrompt` directly from the frontend request payload. This allowed malicious users to completely overwrite the AI's system instructions (Prompt Injection).
+**Learning:** Security boundaries were blurred. The frontend was responsible for constructing the system prompt and supplying the AI's core instructions, rather than just passing the current game context.
+**Prevention:** Construct the system prompt on the backend (`api/tutor.ts` and `server.js`). The frontend should only send a `context` object containing necessary information (e.g., FEN, last move, student context) which the backend uses to securely generate the `systemMessage`.
