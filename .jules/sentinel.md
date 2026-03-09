@@ -1,0 +1,4 @@
+## 2024-05-24 - AI Prompt Injection via Client-Side Construction
+**Vulnerability:** The AI tutor system prompt was constructed on the frontend (`src/services/ai/tutorService.ts`) and sent to the backend (`api/tutor.ts` and `server.js`) via the `systemPrompt` field in the POST request body.
+**Learning:** This architecture allowed any user to intercept the API request and inject a completely custom `systemPrompt`, bypassing all safeguards and instructions meant to restrict the AI's behavior to a "chess tutor for a 7-year-old". This is a classic prompt injection vulnerability via an untrusted input vector.
+**Prevention:** Always construct system prompts and attach context on the server-side. The client should only send necessary state (`GameContext`) to the backend, and the backend must construct the final prompt before sending it to the LLM provider.
