@@ -1,0 +1,4 @@
+## 2024-05-18 - Prompt Injection in AI Tutor API
+**Vulnerability:** The AI tutor API `api/tutor.ts` and `server.js` was receiving `systemPrompt` from the client. While they attempted to filter out `role: 'system'` messages from the incoming `messages` array, an attacker could still pass an arbitrary `systemPrompt` via the request body to completely override the AI's behavior, leading to a prompt injection vulnerability.
+**Learning:** Client-provided system prompts are inherently untrustworthy. Security controls attempting to block prompt injections by filtering only one path (`messages` array) while leaving another wide open (`systemPrompt` string) are ineffective.
+**Prevention:** Construct the system prompt on the server side using trustworthy data (e.g., game context), and never accept raw system prompt instructions directly from the client.
