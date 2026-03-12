@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { tutorService } from '../services/ai/tutorService';
-import type { TutorResponse, GameContext } from '../services/ai/tutorService';
+import type { TutorResponse } from '../services/ai/tutorService';
+import type { GameContext } from '../utils/aiUtils';
 
 interface ChatMessage {
     role: 'user' | 'assistant';

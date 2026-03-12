@@ -1,0 +1,4 @@
+## 2025-03-12 - Critical Prompt Injection via Client-Side System Prompt Construction
+**Vulnerability:** The AI tutor endpoints (`api/tutor.ts` and `server.js`) accepted a `systemPrompt` directly from the client request body. This allowed complete bypassing of the AI's intended instructions, resulting in prompt injection where an attacker could rewrite the system message, changing the behavior of the AI or using it for unintended purposes.
+**Learning:** Constructing the final AI system prompt on the client side and sending it directly to the server is highly insecure. The client cannot be trusted to define backend logic or constraints.
+**Prevention:** Always construct sensitive configurations, instructions, and system prompts on the backend side using raw client inputs (such as a generic context object) rather than trusting client-provided logic or pre-constructed instructions. Move prompt generation utilities securely to the server side.
