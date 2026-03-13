@@ -55,5 +55,29 @@ export function validateTutorRequest(body: unknown): { valid: boolean; error?: s
         return { valid: false, error: 'Messages cannot be empty' };
     }
 
+    // Security: Validate message content length to prevent DoS via massive prompts
+    const MAX_MESSAGE_LENGTH = 1000;
+    const allowedRoles = ['user', 'assistant', 'system'];
+
+    for (const msg of b.messages) {
+        if (!msg || typeof msg !== 'object') {
+            return { valid: false, error: 'Invalid message format' };
+        }
+
+        const message = msg as Record<string, unknown>;
+
+        if (typeof message.role !== 'string' || !allowedRoles.includes(message.role)) {
+            return { valid: false, error: 'Invalid message role' };
+        }
+
+        if (typeof message.content !== 'string') {
+            return { valid: false, error: 'Message content must be a string' };
+        }
+
+        if (message.content.length > MAX_MESSAGE_LENGTH) {
+            return { valid: false, error: `Message exceeds maximum length of ${MAX_MESSAGE_LENGTH} characters` };
+        }
+    }
+
     return { valid: true };
 }
