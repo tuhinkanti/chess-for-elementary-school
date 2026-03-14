@@ -1,7 +1,6 @@
-/* eslint-disable react-hooks/purity */
 import { motion, AnimatePresence } from 'framer-motion';
 import { Star } from 'lucide-react';
-import { useState } from 'react';
+import { useMemo } from 'react';
 
 interface CelebrationProps {
   show: boolean;
@@ -39,15 +38,10 @@ function generateConfettiParticles(): ConfettiParticle[] {
 }
 
 export function Celebration({ show, starsEarned, message, onComplete }: CelebrationProps) {
-  const [confettiParticles, setConfettiParticles] = useState(generateConfettiParticles);
-  const [prevShow, setPrevShow] = useState(show);
-
-  if (show !== prevShow) {
-    setPrevShow(show);
-    if (show) {
-      setConfettiParticles(generateConfettiParticles());
-    }
-  }
+  const confettiParticles = useMemo(
+    () => (show ? generateConfettiParticles() : []),
+    [show]
+  );
 
   return (
     <AnimatePresence>

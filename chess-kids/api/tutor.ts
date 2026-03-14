@@ -14,7 +14,7 @@ interface ChatMessage {
 
 function getModel() {
     switch (provider) {
-        case 'local':
+        case 'local': {
             // LM Studio runs on port 1234 by default with OpenAI-compatible API
             const lmStudio = createOpenAI({
                 baseURL: 'http://localhost:1234/v1',
@@ -22,6 +22,7 @@ function getModel() {
             });
             // Use .chat() to ensure chat completions endpoint is used
             return lmStudio.chat('qwen3-30b-a3b-2507');
+        }
         case 'claude':
             return anthropic('claude-sonnet-4-20250514');
         case 'gemini':
@@ -71,11 +72,19 @@ Always respond with valid JSON: {"message": "your response", "mood": "encouragin
                 mood: 'encouraging'
             });
         }
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error('AI Tutor API Error:', error);
 
+        const message =
+            typeof error === 'object' &&
+            error !== null &&
+            'message' in error &&
+            typeof (error as { message?: unknown }).message === 'string'
+                ? (error as { message: string }).message
+                : '';
+
         // Handle quota/rate limit errors
-        if (error?.message?.includes('429') || error?.message?.includes('quota')) {
+        if (message.includes('429') || message.includes('quota')) {
             return res.status(200).json({
                 message: "Wow, I've been thinking too much today! My magic brain needs a little rest. Try again in a minute!",
                 mood: 'thinking'

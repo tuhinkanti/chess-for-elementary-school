@@ -34,7 +34,7 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'http://localhost:3001',
+        target: 'http://127.0.0.1:3001',
         changeOrigin: true,
       },
     },
@@ -43,5 +43,22 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: ['./src/test/setup.ts'],
+    exclude: ['e2e/**', '**/node_modules/**'],
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (!id.includes('node_modules')) return;
+          if (id.includes('react-router')) return 'react-router';
+          if (id.includes('react-dom') || id.includes('react')) return 'react-vendor';
+          if (id.includes('framer-motion')) return 'motion';
+          if (id.includes('react-chessboard') || id.includes('chess.js')) return 'chess';
+          if (id.includes('@ai-sdk') || id.includes('node_modules/ai')) return 'ai';
+          if (id.includes('lucide-react')) return 'icons';
+          return 'vendor';
+        },
+      },
+    },
   },
 });

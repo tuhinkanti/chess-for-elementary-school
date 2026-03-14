@@ -25,6 +25,10 @@ import { memoryService } from './memoryService';
 
 describe('MemoryService', () => {
     const profileId = 'test-student-123';
+    const memoryServiceInternal = memoryService as unknown as {
+        store: unknown;
+        createEmptyStore: () => unknown;
+    };
 
     beforeEach(() => {
         localStorage.clear();
@@ -33,7 +37,7 @@ describe('MemoryService', () => {
         // In memoryService.ts, the store is initialized in the constructor.
         // To truly reset, we'd need to manually reach into the private store or re-instantiate.
         // For now, let's reset the store manually if possible or just rely on localStorage clear.
-        (memoryService as any).store = (memoryService as any).createEmptyStore();
+        memoryServiceInternal.store = memoryServiceInternal.createEmptyStore();
     });
 
     it('initializes with an empty store', () => {

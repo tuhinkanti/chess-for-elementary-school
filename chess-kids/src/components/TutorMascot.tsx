@@ -18,7 +18,6 @@ interface TutorMascotProps {
 
 export function TutorMascot({ messages, isLoading, onSendMessage, onClose, latestMood }: TutorMascotProps) {
   const [inputValue, setInputValue] = useState('');
-  const [isExpanded, setIsExpanded] = useState(false);
   const chatContainerRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll to bottom when new messages arrive
@@ -28,12 +27,7 @@ export function TutorMascot({ messages, isLoading, onSendMessage, onClose, lates
     }
   }, [messages]);
 
-  // Auto-expand when there are messages
-  useEffect(() => {
-    if (messages.length > 0) {
-      setIsExpanded(true);
-    }
-  }, [messages.length]);
+  const isExpanded = messages.length > 0 || isLoading;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

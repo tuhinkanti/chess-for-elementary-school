@@ -1,10 +1,27 @@
+import { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, useParams } from 'react-router-dom';
 import { ProfileProvider } from './context/ProfileContext';
-import { Home } from './pages/Home';
-import { LessonPage } from './pages/LessonPage';
-import { ProfileSelect } from './pages/ProfileSelect';
-import { NotFound } from './pages/NotFound';
 import './App.css';
+
+const Home = lazy(async () => {
+  const module = await import('./pages/Home');
+  return { default: module.Home };
+});
+
+const LessonPage = lazy(async () => {
+  const module = await import('./pages/LessonPage');
+  return { default: module.LessonPage };
+});
+
+const ProfileSelect = lazy(async () => {
+  const module = await import('./pages/ProfileSelect');
+  return { default: module.ProfileSelect };
+});
+
+const NotFound = lazy(async () => {
+  const module = await import('./pages/NotFound');
+  return { default: module.NotFound };
+});
 
 // Wrapper to force remount of LessonPage when ID changes
 function LessonPageWrapper() {
@@ -17,12 +34,14 @@ function App() {
     <ProfileProvider>
       <BrowserRouter>
         <div className="app">
-          <Routes>
-            <Route path="/profiles" element={<ProfileSelect />} />
-            <Route path="/" element={<Home />} />
-            <Route path="/lesson/:id" element={<LessonPageWrapper />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+          <Suspense fallback={<div className="route-loading">Loading...</div>}>
+            <Routes>
+              <Route path="/profiles" element={<ProfileSelect />} />
+              <Route path="/" element={<Home />} />
+              <Route path="/lesson/:id" element={<LessonPageWrapper />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </Suspense>
         </div>
       </BrowserRouter>
     </ProfileProvider>
