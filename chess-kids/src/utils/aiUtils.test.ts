@@ -59,4 +59,39 @@ describe('validateTutorRequest', () => {
   it('fails if messages array is empty', () => {
     expect(validateTutorRequest({ messages: [] })).toEqual({ valid: false, error: 'Messages cannot be empty' });
   });
+
+  it('fails if a message has an invalid role', () => {
+    const body = { messages: [{ role: 'hacker', content: 'hi' }] };
+    expect(validateTutorRequest(body)).toEqual({ valid: false, error: 'Invalid message role' });
+  });
+
+  it('fails if a message role is missing', () => {
+    const body = { messages: [{ content: 'hi' }] };
+    expect(validateTutorRequest(body)).toEqual({ valid: false, error: 'Invalid message role' });
+  });
+
+  it('fails if a message content is not a string', () => {
+    const body = { messages: [{ role: 'user', content: 123 }] };
+    expect(validateTutorRequest(body)).toEqual({ valid: false, error: 'Message content must be a string' });
+  });
+
+  it('fails if a message content is missing', () => {
+    const body = { messages: [{ role: 'user' }] };
+    expect(validateTutorRequest(body)).toEqual({ valid: false, error: 'Message content must be a string' });
+  });
+
+  it('fails if a message content exceeds 1000 characters', () => {
+    const longContent = 'a'.repeat(1001);
+    const body = { messages: [{ role: 'user', content: longContent }] };
+    expect(validateTutorRequest(body)).toEqual({ valid: false, error: 'Message content exceeds maximum length of 1000 characters' });
+  });
+
+  it('validates correct request body with system and assistant roles', () => {
+    const body = { messages: [
+      { role: 'system', content: 'You are a helpful assistant.' },
+      { role: 'user', content: 'Hello' },
+      { role: 'assistant', content: 'Hi there' }
+    ] };
+    expect(validateTutorRequest(body)).toEqual({ valid: true });
+  });
 });
