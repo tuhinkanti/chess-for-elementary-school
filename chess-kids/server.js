@@ -8,8 +8,48 @@ import { createOpenAI } from '@ai-sdk/openai';
 import { google } from '@ai-sdk/google';
 import { anthropic } from '@ai-sdk/anthropic';
 import dotenv from 'dotenv';
+import fs from 'fs';
 
 dotenv.config();
+
+// Since server.js is run directly with Node.js without a bundler, we need to extract the JS logic or compile it
+// But for now, we can read the system prompt logic inline or read the compiled module if available.
+// However, the previous approach in `server.js` was just a duplicated string.
+// A simpler way without breaking standard ES Modules node is just keeping the inline system prompt but building it securely here as well.
+function constructSystemPrompt(context) {
+    const studentInfo = context?.studentContext
+        ? `\n## What You Know About This Student\n${context.studentContext}\n`
+        : '';
+
+    const boardInfo = context?.fen
+        ? `\nCurrent Board (FEN): ${context.fen}\nLast Move: ${context.lastMove || "None"}`
+        : '';
+
+    return `
+You are Grandmaster Gloop, a friendly, magical chess tutor for a 7-year-old.
+${studentInfo}
+Goal: Help the student with their current lesson in a fun, encouraging way.
+Objective: ${context?.lessonObjective || "Play a good move"}
+${boardInfo}
+
+Instructions:
+1. Be encouraging, concise, and use simple words.
+2. If the user made a mistake, explain WHY plainly (no complex notation).
+3. Reference what you know about the student's strengths and struggles if relevant.
+4. Keep responses SHORT - 1-3 sentences max for young learners.
+5. Identify NEW facts about the student based on this interaction (e.g., "Student struggles with knights", "Student likes visual hints") and include them in 'learnedFacts'.
+6. Always respond with valid JSON.
+
+Response format:
+{
+  "message": string (your friendly response),
+  "mood": "encouraging" | "thinking" | "surprised" | "celebrating",
+  "highlightSquare": string (optional),
+  "drawArrow": string (optional "e2-e4"),
+  "learnedFacts": string[] (optional list of new observations)
+}
+    `.trim();
+}
 
 const app = express();
 const PORT = 3001;
@@ -37,15 +77,13 @@ function getModel() {
 
 app.post('/api/tutor', async (req, res) => {
     try {
-        const { messages, systemPrompt } = req.body;
+        const { messages, context } = req.body;
 
         if (!messages || messages.length === 0) {
             return res.status(400).json({ error: 'Messages are required' });
         }
 
-        const systemMessage = systemPrompt || `You are Grandmaster Gloop, a friendly chess tutor for a 7-year-old.
-Be encouraging, concise, and explain things simply.
-Always respond with valid JSON: {"message": "your response", "mood": "encouraging"|"thinking"|"surprised"|"celebrating"}`;
+        const systemMessage = constructSystemPrompt(context);
 
         // Security: Filter out any client-supplied 'system' messages to prevent prompt injection
         const safeMessages = messages.filter(m => m.role !== 'system');

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { tutorService, type GameContext } from './tutorService';
+import { tutorService } from './tutorService';
+import { constructSystemPrompt, type GameContext } from '../../utils/aiUtils.js';
 
 describe('TutorService', () => {
     beforeEach(() => {
@@ -15,8 +16,7 @@ describe('TutorService', () => {
             studentContext: 'Student likes to play fast.',
         };
 
-        // Access private method for testing purpose
-        const prompt = (tutorService as any).constructSystemPrompt(context);
+        const prompt = constructSystemPrompt(context);
 
         expect(prompt).toContain('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1');
         expect(prompt).toContain('Learn to move pawns');
