@@ -1,0 +1,4 @@
+## 2025-02-18 - Missing Message Length Limits & Role Validation
+**Vulnerability:** The AI Tutor API (`/api/tutor` and `server.js`) was vulnerable to excessive token usage (DoS) and potential prompt injection due to missing input validation on the length of user messages and lack of strict role enforcement in the `validateTutorRequest` utility function.
+**Learning:** Even though the server filters out `system` roles from user requests, an attacker could still supply extremely large message content to exhaust resources, or potentially use non-standard roles. Strict validation is essential before the request ever reaches the LLM API.
+**Prevention:** Always implement maximum content length limits (e.g., 1000 characters) and strict whitelist validation for roles ('user', 'assistant', 'system') on any user-provided messages being sent to an AI service to prevent abuse and ensure robust input sanitation.
