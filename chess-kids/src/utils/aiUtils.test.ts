@@ -59,4 +59,23 @@ describe('validateTutorRequest', () => {
   it('fails if messages array is empty', () => {
     expect(validateTutorRequest({ messages: [] })).toEqual({ valid: false, error: 'Messages cannot be empty' });
   });
+
+  it('fails if a message has an invalid role', () => {
+    expect(validateTutorRequest({ messages: [{ role: 'admin', content: 'hi' }] })).toEqual({ valid: false, error: 'Invalid or missing role' });
+    expect(validateTutorRequest({ messages: [{ content: 'hi' }] })).toEqual({ valid: false, error: 'Invalid or missing role' });
+  });
+
+  it('fails if a message has invalid or missing content', () => {
+    expect(validateTutorRequest({ messages: [{ role: 'user', content: 123 }] })).toEqual({ valid: false, error: 'Invalid or missing content' });
+    expect(validateTutorRequest({ messages: [{ role: 'user' }] })).toEqual({ valid: false, error: 'Invalid or missing content' });
+  });
+
+  it('fails if a message content exceeds maximum length', () => {
+    const longContent = 'a'.repeat(1001);
+    expect(validateTutorRequest({ messages: [{ role: 'user', content: longContent }] })).toEqual({ valid: false, error: 'Message content exceeds maximum length' });
+  });
+
+  it('validates messages with valid roles and content length', () => {
+    expect(validateTutorRequest({ messages: [{ role: 'user', content: 'valid' }, { role: 'assistant', content: 'also valid' }] })).toEqual({ valid: true });
+  });
 });
