@@ -1,0 +1,4 @@
+## 2024-05-18 - Missing deep validation for AI requests
+**Vulnerability:** The `/api/tutor` endpoint validated the presence of a `messages` array but failed to enforce strict formatting for the internal objects, allowing potentially extremely long strings or incorrect role values, which could result in DoS or token exhaustion.
+**Learning:** Validating deeply nested structures, particularly those passed directly to AI models, is essential to mitigate resource exhaustion and prompt injection risks. We need safeguards to prevent excessive token usage or DoS, and the memory provided context on this requirement.
+**Prevention:** Always implement deeply-nested object validation (e.g. role bounds, string type checks, and length limitations) for data being forwarded to external AI APIs.

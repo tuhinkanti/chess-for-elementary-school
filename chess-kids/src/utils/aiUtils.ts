@@ -55,5 +55,26 @@ export function validateTutorRequest(body: unknown): { valid: boolean; error?: s
         return { valid: false, error: 'Messages cannot be empty' };
     }
 
+    // Validate each message
+    for (const msg of b.messages) {
+        if (!msg || typeof msg !== 'object') {
+            return { valid: false, error: 'Each message must be an object' };
+        }
+
+        const message = msg as Record<string, unknown>;
+
+        if (typeof message.role !== 'string' || !['user', 'assistant', 'system'].includes(message.role)) {
+            return { valid: false, error: 'Invalid message role. Must be user, assistant, or system' };
+        }
+
+        if (typeof message.content !== 'string') {
+            return { valid: false, error: 'Message content must be a string' };
+        }
+
+        if (message.content.length > 1000) {
+            return { valid: false, error: 'Message content exceeds maximum length of 1000 characters' };
+        }
+    }
+
     return { valid: true };
 }
