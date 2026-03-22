@@ -55,5 +55,26 @@ export function validateTutorRequest(body: unknown): { valid: boolean; error?: s
         return { valid: false, error: 'Messages cannot be empty' };
     }
 
+    const MAX_CONTENT_LENGTH = 1000;
+    const VALID_ROLES = ['user', 'assistant', 'system'];
+
+    for (const msg of b.messages as Record<string, unknown>[]) {
+        if (!msg || typeof msg !== 'object') {
+            return { valid: false, error: 'Each message must be an object' };
+        }
+
+        if (!msg.role || typeof msg.role !== 'string' || !VALID_ROLES.includes(msg.role)) {
+            return { valid: false, error: "Message role must be 'user', 'assistant', or 'system'" };
+        }
+
+        if (typeof msg.content !== 'string') {
+            return { valid: false, error: 'Message content must be a string' };
+        }
+
+        if (msg.content.length > MAX_CONTENT_LENGTH) {
+            return { valid: false, error: `Message content exceeds maximum length of ${MAX_CONTENT_LENGTH} characters` };
+        }
+    }
+
     return { valid: true };
 }

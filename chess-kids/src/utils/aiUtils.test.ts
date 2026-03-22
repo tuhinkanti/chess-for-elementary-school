@@ -59,4 +59,26 @@ describe('validateTutorRequest', () => {
   it('fails if messages array is empty', () => {
     expect(validateTutorRequest({ messages: [] })).toEqual({ valid: false, error: 'Messages cannot be empty' });
   });
+
+  it('fails if a message is not an object', () => {
+    expect(validateTutorRequest({ messages: ['not-an-object'] })).toEqual({ valid: false, error: 'Each message must be an object' });
+  });
+
+  it('fails if a message is missing a role', () => {
+    expect(validateTutorRequest({ messages: [{ content: 'hi' }] })).toEqual({ valid: false, error: "Message role must be 'user', 'assistant', or 'system'" });
+  });
+
+  it('fails if a message has an invalid role', () => {
+    expect(validateTutorRequest({ messages: [{ role: 'admin', content: 'hi' }] })).toEqual({ valid: false, error: "Message role must be 'user', 'assistant', or 'system'" });
+  });
+
+  it('fails if message content is missing or not a string', () => {
+    expect(validateTutorRequest({ messages: [{ role: 'user' }] })).toEqual({ valid: false, error: 'Message content must be a string' });
+    expect(validateTutorRequest({ messages: [{ role: 'user', content: 123 }] })).toEqual({ valid: false, error: 'Message content must be a string' });
+  });
+
+  it('fails if message content exceeds 1000 characters', () => {
+    const longContent = 'a'.repeat(1001);
+    expect(validateTutorRequest({ messages: [{ role: 'user', content: longContent }] })).toEqual({ valid: false, error: 'Message content exceeds maximum length of 1000 characters' });
+  });
 });
