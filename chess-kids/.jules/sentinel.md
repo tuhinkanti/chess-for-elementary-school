@@ -1,0 +1,4 @@
+## 2024-05-20 - Missing Prompt Input Validation on AI Endpoint
+**Vulnerability:** The AI tutor endpoint lacked proper length and role validation on user-provided messages array (`validateTutorRequest`). This allowed potentially very large prompts, leading to token exhaustion or DoS against the LLM, as well as prompt injection via unexpected roles (e.g. `system`).
+**Learning:** Even though server-side components may assemble prompts, the input coming from clients needs strict structural validation to avoid resource exhaustion and unexpected behavior from the LLM.
+**Prevention:** Always validate all incoming message arrays intended for LLM APIs. Enforce stringent string length limits on content, ensure all message object properties exist and are correctly typed, and restrict allowed roles to standard conversational actors (`user`, `assistant`, `system` only).
