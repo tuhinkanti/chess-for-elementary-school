@@ -59,4 +59,24 @@ describe('validateTutorRequest', () => {
   it('fails if messages array is empty', () => {
     expect(validateTutorRequest({ messages: [] })).toEqual({ valid: false, error: 'Messages cannot be empty' });
   });
+
+  it('fails if message is not an object', () => {
+    expect(validateTutorRequest({ messages: ['not-an-object'] })).toEqual({ valid: false, error: 'Invalid message structure' });
+    expect(validateTutorRequest({ messages: [null] })).toEqual({ valid: false, error: 'Invalid message structure' });
+  });
+
+  it('fails if message has invalid or missing role', () => {
+    expect(validateTutorRequest({ messages: [{ content: 'hi' }] })).toEqual({ valid: false, error: 'Invalid or missing role' });
+    expect(validateTutorRequest({ messages: [{ role: 'admin', content: 'hi' }] })).toEqual({ valid: false, error: 'Invalid or missing role' });
+  });
+
+  it('fails if message has invalid or missing content', () => {
+    expect(validateTutorRequest({ messages: [{ role: 'user' }] })).toEqual({ valid: false, error: 'Invalid or missing content' });
+    expect(validateTutorRequest({ messages: [{ role: 'user', content: 123 }] })).toEqual({ valid: false, error: 'Invalid or missing content' });
+  });
+
+  it('fails if message content exceeds 1000 characters', () => {
+    const longContent = 'a'.repeat(1001);
+    expect(validateTutorRequest({ messages: [{ role: 'user', content: longContent }] })).toEqual({ valid: false, error: 'Message content exceeds maximum length of 1000 characters' });
+  });
 });

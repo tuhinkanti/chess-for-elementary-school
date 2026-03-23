@@ -55,5 +55,26 @@ export function validateTutorRequest(body: unknown): { valid: boolean; error?: s
         return { valid: false, error: 'Messages cannot be empty' };
     }
 
+    // Validate each message structure and prevent DoS / prompt injection
+    for (const msg of b.messages) {
+        if (!msg || typeof msg !== 'object') {
+            return { valid: false, error: 'Invalid message structure' };
+        }
+
+        const message = msg as Record<string, unknown>;
+
+        if (!('role' in message) || !['user', 'assistant', 'system'].includes(message.role as string)) {
+            return { valid: false, error: 'Invalid or missing role' };
+        }
+
+        if (!('content' in message) || typeof message.content !== 'string') {
+            return { valid: false, error: 'Invalid or missing content' };
+        }
+
+        if (message.content.length > 1000) {
+            return { valid: false, error: 'Message content exceeds maximum length of 1000 characters' };
+        }
+    }
+
     return { valid: true };
 }
