@@ -1,0 +1,4 @@
+## 2024-05-24 - [Missing input validation and length limits on AI Tutor Prompt Request]
+ **Vulnerability:** AI Tutor prompt processing endpoint (`/api/tutor`) lacked adequate input validation. It did not verify the internal structures of message objects, allowlisted specific roles, verify the type of `content`, or limit the string length of `content`.
+ **Learning:** Incomplete validation could lead to AI prompt injection attacks or Denial of Service (DoS) attacks by exploiting unbounded token generation constraints from processing incredibly large prompts. Relying only on superficial array presence checks for incoming external prompt requests is insufficient.
+ **Prevention:** Ensure robust schema validation is explicitly handled on inbound HTTP request JSON arrays traversing to AI services. Set hard maximum length constraints on all strings interacting with prompt generation, and restrict user-supplied arrays (like `roles`) to allowlisted static lists.
