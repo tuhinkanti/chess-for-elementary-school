@@ -59,4 +59,15 @@ describe('validateTutorRequest', () => {
   it('fails if messages array is empty', () => {
     expect(validateTutorRequest({ messages: [] })).toEqual({ valid: false, error: 'Messages cannot be empty' });
   });
+
+  it('fails if messages array exceeds 50 items', () => {
+    const messages = Array.from({ length: 51 }, () => ({ role: 'user', content: 'test' }));
+    expect(validateTutorRequest({ messages })).toEqual({ valid: false, error: 'Messages array exceeds maximum length of 50' });
+  });
+
+  it('fails if message content exceeds 1000 characters', () => {
+    const longContent = 'a'.repeat(1001);
+    const body = { messages: [{ role: 'user', content: longContent }] };
+    expect(validateTutorRequest(body)).toEqual({ valid: false, error: 'Message content at index 0 exceeds maximum length of 1000 characters or is not a string' });
+  });
 });
