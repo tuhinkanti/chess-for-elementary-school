@@ -55,5 +55,33 @@ export function validateTutorRequest(body: unknown): { valid: boolean; error?: s
         return { valid: false, error: 'Messages cannot be empty' };
     }
 
+    // Security: Limit number of messages to prevent DoS via massive payloads
+    if (b.messages.length > 50) {
+        return { valid: false, error: 'Too many messages in history' };
+    }
+
+    // Security: Validate message structure to prevent injection/exploitation
+    for (const msg of b.messages) {
+        if (!msg || typeof msg !== 'object') {
+            return { valid: false, error: 'Invalid message structure' };
+        }
+
+        const m = msg as Record<string, unknown>;
+
+        // Role validation
+        if (typeof m.role !== 'string' || !['user', 'assistant', 'system'].includes(m.role)) {
+            return { valid: false, error: 'Invalid message role' };
+        }
+
+        // Content validation (length limit to prevent token exhaustion / DoS)
+        if (typeof m.content !== 'string') {
+            return { valid: false, error: 'Message content must be a string' };
+        }
+
+        if (m.content.length > 1000) {
+            return { valid: false, error: 'Message content exceeds maximum length' };
+        }
+    }
+
     return { valid: true };
 }
