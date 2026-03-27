@@ -1,0 +1,4 @@
+## 2026-03-27 - [Sentinel] Input Validation (DoS / AI Prompt Extraction Protection)
+**Vulnerability:** The `validateTutorRequest` function previously lacked proper bounds checks, making it vulnerable to Denial of Service (DoS) attacks. Specifically, malicious payloads could include virtually unlimited arrays containing huge messages and invalid system roles causing severe impact on upstream provider token usage limits, potential arbitrary prompt injection, and excessive memory footprint on our server implementation.
+**Learning:** This existed because while structure validation was present (array of messages), quantitative restrictions and specific role adherence were omitted.
+**Prevention:** Always implement strict maximum limits on list-based payloads, bounds limits on long string types (like messages and text inputs), and strict enum/inclusion checks for expected constrained values (like 'user' or 'system' roles).
