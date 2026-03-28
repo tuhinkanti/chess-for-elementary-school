@@ -1,0 +1,4 @@
+## 2025-03-28 - Token Exhaustion and DoS via Unbounded AI Context
+**Vulnerability:** The AI tutor endpoint lacked bounds on `messages` size, array length, and content, allowing users to flood the API with giant messages or arbitrarily high number of messages. This causes an application-layer Denial of Service, out of memory crashes, and extreme token usage leading to massive unexpected billing and rate limiting.
+**Learning:** Even internal backend functions reading validated requests should enforce their own strict input bounds as defense-in-depth, and AI generation arrays require length limits in addition to simple type checking.
+**Prevention:** Strictly bound array lengths (e.g., maximum 50 messages), string sizes (e.g., 1000 character maximums), and allowed values (e.g., specific roles) on any unvalidated, client-supplied JSON arrays fed into LLMs.
