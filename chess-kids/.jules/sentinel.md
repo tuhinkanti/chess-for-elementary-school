@@ -1,0 +1,4 @@
+## 2025-03-29 - Missing Input Length Limits & Role Validation on AI Prompt Endpoint
+**Vulnerability:** The AI tutor endpoint accepted unlimited messages, unbounded string lengths, and unvalidated roles. This allowed potential DoS attacks (consuming backend compute/tokens) and unconstrained prompt injection vectors (e.g., feeding 'system' roles directly from client input if not fully sanitized).
+**Learning:** LLM API boundaries must enforce strict length and depth constraints just like any other database input. Unbounded arrays or string values passed to token-charging models can quickly exhaust quotas or introduce context-window attacks.
+**Prevention:** Always implement array length bounds, string content length limits, and strict role validation (using allowlists) in backend payload validation routines *before* proxying data to LLM providers.
