@@ -55,5 +55,27 @@ export function validateTutorRequest(body: unknown): { valid: boolean; error?: s
         return { valid: false, error: 'Messages cannot be empty' };
     }
 
+    // Security constraints (DoS prevention & Token limits)
+    if (b.messages.length > 50) {
+        return { valid: false, error: 'Too many messages (max 50)' };
+    }
+
+    for (const msg of b.messages) {
+        if (!msg || typeof msg !== 'object') {
+            return { valid: false, error: 'Invalid message format' };
+        }
+        const m = msg as Record<string, unknown>;
+
+        if (!['user', 'assistant', 'system'].includes(m.role as string)) {
+            return { valid: false, error: 'Invalid message role' };
+        }
+        if (typeof m.content !== 'string') {
+            return { valid: false, error: 'Message content must be a string' };
+        }
+        if (m.content.length > 1000) {
+            return { valid: false, error: 'Message content too long (max 1000 chars)' };
+        }
+    }
+
     return { valid: true };
 }
