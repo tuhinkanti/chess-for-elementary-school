@@ -1,0 +1,4 @@
+## 2025-03-31 - [Add Message Length and Count Validation]
+**Vulnerability:** The AI tutor API endpoint lacked validation on the length of incoming messages and the total number of messages in the conversation history, making it susceptible to Resource Exhaustion and Denial of Service (DoS) attacks via massive token contexts sent to the LLM API.
+**Learning:** External AI APIs charge per token and have rate limits. Allowing unrestricted client input directly exposes the application to unexpected cost spikes and service disruptions. The development server (`server.js`) was entirely bypassing existing validation logic.
+**Prevention:** Always enforce strict bounds (e.g., maximum string length, maximum array size) on any user-supplied data being forwarded to external services, especially LLMs. Ensure validation middleware or functions are uniformly applied across all entry points, including development servers, to mirror production environments.
