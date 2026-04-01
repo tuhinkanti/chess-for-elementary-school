@@ -1,0 +1,4 @@
+## 2024-05-18 - Fix AI Request Validation (DoS Prevention)
+**Vulnerability:** The AI tutor request endpoint lacked validation for the number of messages in the payload, the length of each message's content, and the validity of roles. This exposed the backend to potential Denial of Service (DoS) attacks and resource exhaustion via massive payload submissions to external AI APIs.
+**Learning:** Always set explicit bounds (length limitations) on arrays and string attributes being submitted to external AI APIs. Schema validation is crucial for complex JSON payloads to ensure fields match expected types and structures before processing.
+**Prevention:** Implement comprehensive input validation (e.g., maximum array lengths, maximum string lengths, and strict enum values for roles) for all user-provided data before passing it to AI models. Using schema validation libraries like Zod can further robustly handle these constraints.
