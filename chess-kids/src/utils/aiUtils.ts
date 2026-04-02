@@ -55,5 +55,24 @@ export function validateTutorRequest(body: unknown): { valid: boolean; error?: s
         return { valid: false, error: 'Messages cannot be empty' };
     }
 
+    if (b.messages.length > 50) {
+        return { valid: false, error: 'Too many messages (max 50)' };
+    }
+
+    for (const msg of b.messages as any[]) {
+        if (!msg || typeof msg !== 'object') {
+            return { valid: false, error: 'Each message must be an object' };
+        }
+        if (!['user', 'assistant', 'system'].includes(msg.role)) {
+            return { valid: false, error: 'Invalid message role' };
+        }
+        if (typeof msg.content !== 'string') {
+            return { valid: false, error: 'Message content must be a string' };
+        }
+        if (msg.content.length > 1000) {
+            return { valid: false, error: 'Message content exceeds 1000 characters' };
+        }
+    }
+
     return { valid: true };
 }
