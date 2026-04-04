@@ -8,6 +8,7 @@ import { createOpenAI } from '@ai-sdk/openai';
 import { google } from '@ai-sdk/google';
 import { anthropic } from '@ai-sdk/anthropic';
 import dotenv from 'dotenv';
+import { validateTutorRequest } from './src/utils/aiUtils.js';
 
 dotenv.config();
 
@@ -37,11 +38,12 @@ function getModel() {
 
 app.post('/api/tutor', async (req, res) => {
     try {
-        const { messages, systemPrompt } = req.body;
-
-        if (!messages || messages.length === 0) {
-            return res.status(400).json({ error: 'Messages are required' });
+        const validation = validateTutorRequest(req.body);
+        if (!validation.valid) {
+            return res.status(400).json({ error: validation.error });
         }
+
+        const { messages, systemPrompt } = req.body;
 
         const systemMessage = systemPrompt || `You are Grandmaster Gloop, a friendly chess tutor for a 7-year-old.
 Be encouraging, concise, and explain things simply.
