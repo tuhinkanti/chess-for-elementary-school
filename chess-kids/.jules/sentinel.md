@@ -1,0 +1,4 @@
+## 2024-05-24 - Fix Missing Input Validation and DoS Risk
+**Vulnerability:** The AI tutor endpoint accepted arbitrarily large message arrays and excessively long string contents, which could lead to resource exhaustion (Denial of Service) and prompt injection, as well as accepting unverified roles.
+**Learning:** Always implement strict validation on the size of arrays and lengths of strings submitted by users to external APIs, and restrict roles strictly to valid values.
+**Prevention:** Enforce maximum array length (50 messages), string length limitations (1000 chars), and strict enum matching ('user', 'assistant', 'system') for external LLM API inputs using a shared validation utility.
