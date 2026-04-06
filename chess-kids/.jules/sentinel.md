@@ -1,0 +1,4 @@
+## 2024-05-18 - Missing Input Constraints Lead to Denial of Service Risk
+**Vulnerability:** The AI tutor endpoint accepted arbitrarily long arrays of messages and infinitely long strings in the `content` field.
+**Learning:** External APIs often bill per token or have strict usage limits. Allowing users to submit an unbounded number of tokens acts as both a Denial of Service (DoS) vulnerability via resource exhaustion and a financial impact vulnerability.
+**Prevention:** Always implement strict input validation length limits on both array sizing and string lengths for user input passed to third-party endpoints, ideally at the earliest point of processing (like a validation middleware or utility function).
