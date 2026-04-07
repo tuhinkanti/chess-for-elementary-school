@@ -1,0 +1,4 @@
+## 2024-05-20 - [Add length validation to AI request body]
+**Vulnerability:** The AI tutor request validation (`validateTutorRequest` in `src/utils/aiUtils.ts`) did not enforce upper bounds on the number of chat messages or the length of individual message contents. This could allow an attacker to send an excessively large payload, leading to Denial of Service (DoS) via memory exhaustion on the server or token exhaustion/high costs at the AI API provider.
+**Learning:** Always implement strict length validation (bounds checking) on arrays and strings that are passed to external APIs or processed heavily on the backend, even if basic structural checks exist.
+**Prevention:** Include explicit length limits (e.g., `messages.length > 50`, `message.content.length > 1000`) in all input validation functions handling user-supplied content intended for LLMs.
