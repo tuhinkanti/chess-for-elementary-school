@@ -11,6 +11,45 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
+function validateTutorRequest(body) {
+    if (!body || typeof body !== 'object') {
+        return { valid: false, error: 'Invalid request body' };
+    }
+
+    if (!('messages' in body)) {
+        return { valid: false, error: 'Messages are required' };
+    }
+
+    if (!Array.isArray(body.messages)) {
+         return { valid: false, error: 'Messages must be an array' };
+    }
+
+    if (body.messages.length === 0) {
+        return { valid: false, error: 'Messages cannot be empty' };
+    }
+
+    if (body.messages.length > 50) {
+        return { valid: false, error: 'Maximum of 50 messages allowed' };
+    }
+
+    for (const msg of body.messages) {
+        if (!msg || typeof msg !== 'object') {
+            return { valid: false, error: 'Invalid message format' };
+        }
+        if (typeof msg.role !== 'string' || !['user', 'assistant', 'system'].includes(msg.role)) {
+            return { valid: false, error: 'Invalid message role' };
+        }
+        if (typeof msg.content !== 'string') {
+            return { valid: false, error: 'Message content must be a string' };
+        }
+        if (msg.content.length > 1000) {
+            return { valid: false, error: 'Message content exceeds 1000 characters' };
+        }
+    }
+
+    return { valid: true };
+}
+
 const app = express();
 const PORT = 3001;
 
@@ -37,11 +76,12 @@ function getModel() {
 
 app.post('/api/tutor', async (req, res) => {
     try {
-        const { messages, systemPrompt } = req.body;
-
-        if (!messages || messages.length === 0) {
-            return res.status(400).json({ error: 'Messages are required' });
+        const validation = validateTutorRequest(req.body);
+        if (!validation.valid) {
+            return res.status(400).json({ error: validation.error });
         }
+
+        const { messages, systemPrompt } = req.body;
 
         const systemMessage = systemPrompt || `You are Grandmaster Gloop, a friendly chess tutor for a 7-year-old.
 Be encouraging, concise, and explain things simply.

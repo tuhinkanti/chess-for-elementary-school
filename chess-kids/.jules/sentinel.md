@@ -1,0 +1,4 @@
+## 2026-04-09 - Prevent DoS from Unbounded Array Inputs to External APIs
+**Vulnerability:** The `validateTutorRequest` function lacked explicit bounds on the number of messages and the length of each message's content submitted to external AI APIs. Additionally, `server.js` did not use this validation function, making the local dev server completely vulnerable.
+**Learning:** Always enforce strict length and count limits on user-provided arrays and strings that are passed to resource-intensive external APIs or LLMs to prevent Denial of Service (DoS) attacks and excessive resource/token consumption.
+**Prevention:** Implement input validation with explicit maximums (e.g., max 50 messages, max 1000 chars per message content) and strict type/role validation *before* processing any external API requests. Ensure this validation is consistently applied across both production and local development environments.
