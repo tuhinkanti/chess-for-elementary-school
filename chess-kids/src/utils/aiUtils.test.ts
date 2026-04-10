@@ -59,4 +59,22 @@ describe('validateTutorRequest', () => {
   it('fails if messages array is empty', () => {
     expect(validateTutorRequest({ messages: [] })).toEqual({ valid: false, error: 'Messages cannot be empty' });
   });
+
+  it('fails if there are more than 50 messages', () => {
+    const messages = Array(51).fill({ role: 'user', content: 'test' });
+    expect(validateTutorRequest({ messages })).toEqual({ valid: false, error: 'Too many messages (max 50)' });
+  });
+
+  it('fails if a message has an invalid role', () => {
+    expect(validateTutorRequest({ messages: [{ role: 'hacker', content: 'hi' }] })).toEqual({ valid: false, error: 'Invalid message role' });
+  });
+
+  it('fails if message content exceeds 1000 characters', () => {
+    const longContent = 'a'.repeat(1001);
+    expect(validateTutorRequest({ messages: [{ role: 'user', content: longContent }] })).toEqual({ valid: false, error: 'Message content exceeds maximum length of 1000 characters' });
+  });
+
+  it('fails if message format is invalid', () => {
+    expect(validateTutorRequest({ messages: [null] })).toEqual({ valid: false, error: 'Invalid message format' });
+  });
 });
