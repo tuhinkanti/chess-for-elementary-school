@@ -55,5 +55,41 @@ export function validateTutorRequest(body: unknown): { valid: boolean; error?: s
         return { valid: false, error: 'Messages cannot be empty' };
     }
 
+    if (b.systemPrompt && typeof b.systemPrompt !== 'string') {
+        return { valid: false, error: 'System prompt must be a string' };
+    }
+
+    if (b.systemPrompt && (b.systemPrompt as string).length > 2000) {
+        return { valid: false, error: 'System prompt exceeds maximum length of 2000 characters' };
+    }
+
+    // Security: Enforce a maximum of 50 messages to prevent DoS via token exhaustion
+    if (b.messages.length > 50) {
+        return { valid: false, error: 'Too many messages in request' };
+    }
+
+    // Security: Validate message structure, roles, and content length
+    const allowedRoles = ['user', 'assistant', 'system'];
+    for (const msg of b.messages) {
+        if (!msg || typeof msg !== 'object') {
+            return { valid: false, error: 'Invalid message structure' };
+        }
+
+        const m = msg as Record<string, unknown>;
+
+        if (!m.role || typeof m.role !== 'string' || !allowedRoles.includes(m.role)) {
+            return { valid: false, error: 'Invalid or missing message role' };
+        }
+
+        if (!m.content || typeof m.content !== 'string') {
+            return { valid: false, error: 'Invalid or missing message content' };
+        }
+
+        // Security: Enforce a maximum length of 1000 characters per message
+        if (m.content.length > 1000) {
+            return { valid: false, error: 'Message content exceeds maximum length of 1000 characters' };
+        }
+    }
+
     return { valid: true };
 }
