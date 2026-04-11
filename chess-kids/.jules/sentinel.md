@@ -1,0 +1,4 @@
+## 2025-04-11 - Add Rate Limiting and DoS Protections to AI Tutor Endpoints
+**Vulnerability:** The `/api/tutor` endpoints lacked explicit limits on the number of messages or the length of message contents parsed by the backend when dealing with AI requests. This posed a risk for DoS attacks and significant token exhaustion.
+**Learning:** External AI integrations are prime vectors for resource abuse if input from users is unbounded. Even if the frontend has basic validation, unbounded inputs routed through backends to AI models can quickly rack up costs and exhaust processing cycles.
+**Prevention:** Implement strict input array length limitations (e.g., max 50 messages) and strict content length limitations (e.g., max 1000 characters) across all boundaries handling AI proxy functionality. Explicitly validate message roles (e.g., 'user', 'assistant', 'system') on incoming payloads.

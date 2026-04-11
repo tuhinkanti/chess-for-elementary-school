@@ -35,13 +35,68 @@ function getModel() {
     }
 }
 
+function validateTutorRequest(body) {
+    if (!body || typeof body !== 'object') {
+        return { valid: false, error: 'Invalid request body' };
+    }
+
+    if (!('messages' in body)) {
+        return { valid: false, error: 'Messages are required' };
+    }
+
+    if (!Array.isArray(body.messages)) {
+         return { valid: false, error: 'Messages must be an array' };
+    }
+
+    if (body.messages.length === 0) {
+        return { valid: false, error: 'Messages cannot be empty' };
+    }
+
+    if (body.systemPrompt && typeof body.systemPrompt !== 'string') {
+        return { valid: false, error: 'System prompt must be a string' };
+    }
+
+    if (body.systemPrompt && body.systemPrompt.length > 2000) {
+        return { valid: false, error: 'System prompt exceeds maximum length of 2000 characters' };
+    }
+
+    // Security: Enforce a maximum of 50 messages to prevent DoS via token exhaustion
+    if (body.messages.length > 50) {
+        return { valid: false, error: 'Too many messages in request' };
+    }
+
+    // Security: Validate message structure, roles, and content length
+    const allowedRoles = ['user', 'assistant', 'system'];
+    for (const msg of body.messages) {
+        if (!msg || typeof msg !== 'object') {
+            return { valid: false, error: 'Invalid message structure' };
+        }
+
+        if (!msg.role || typeof msg.role !== 'string' || !allowedRoles.includes(msg.role)) {
+            return { valid: false, error: 'Invalid or missing message role' };
+        }
+
+        if (!msg.content || typeof msg.content !== 'string') {
+            return { valid: false, error: 'Invalid or missing message content' };
+        }
+
+        // Security: Enforce a maximum length of 1000 characters per message
+        if (msg.content.length > 1000) {
+            return { valid: false, error: 'Message content exceeds maximum length of 1000 characters' };
+        }
+    }
+
+    return { valid: true };
+}
+
 app.post('/api/tutor', async (req, res) => {
     try {
-        const { messages, systemPrompt } = req.body;
-
-        if (!messages || messages.length === 0) {
-            return res.status(400).json({ error: 'Messages are required' });
+        const validation = validateTutorRequest(req.body);
+        if (!validation.valid) {
+            return res.status(400).json({ error: validation.error });
         }
+
+        const { messages, systemPrompt } = req.body;
 
         const systemMessage = systemPrompt || `You are Grandmaster Gloop, a friendly chess tutor for a 7-year-old.
 Be encouraging, concise, and explain things simply.
