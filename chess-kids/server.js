@@ -35,13 +35,66 @@ function getModel() {
     }
 }
 
+function validateTutorRequest(body) {
+    if (!body || typeof body !== 'object') {
+        return { valid: false, error: 'Invalid request body' };
+    }
+
+    if (!('messages' in body)) {
+        return { valid: false, error: 'Messages are required' };
+    }
+
+    if (!Array.isArray(body.messages)) {
+         return { valid: false, error: 'Messages must be an array' };
+    }
+
+    if (body.messages.length === 0) {
+        return { valid: false, error: 'Messages cannot be empty' };
+    }
+
+    if (body.messages.length > 50) {
+        return { valid: false, error: 'Too many messages (max 50)' };
+    }
+
+    const messages = body.messages;
+    for (const msg of messages) {
+        if (!msg || typeof msg !== 'object') {
+            return { valid: false, error: 'Invalid message format' };
+        }
+
+        if (!('role' in msg) || !['user', 'assistant', 'system'].includes(msg.role)) {
+            return { valid: false, error: 'Invalid message role' };
+        }
+
+        if (!('content' in msg) || typeof msg.content !== 'string') {
+            return { valid: false, error: 'Invalid message content' };
+        }
+
+        if (msg.content.length > 1000) {
+            return { valid: false, error: 'Message content too long (max 1000 chars)' };
+        }
+    }
+
+    if ('systemPrompt' in body) {
+        if (typeof body.systemPrompt !== 'string') {
+            return { valid: false, error: 'System prompt must be a string' };
+        }
+        if (body.systemPrompt.length > 2000) {
+            return { valid: false, error: 'System prompt too long (max 2000 chars)' };
+        }
+    }
+
+    return { valid: true };
+}
+
 app.post('/api/tutor', async (req, res) => {
     try {
-        const { messages, systemPrompt } = req.body;
-
-        if (!messages || messages.length === 0) {
-            return res.status(400).json({ error: 'Messages are required' });
+        const validation = validateTutorRequest(req.body);
+        if (!validation.valid) {
+            return res.status(400).json({ error: validation.error });
         }
+
+        const { messages, systemPrompt } = req.body;
 
         const systemMessage = systemPrompt || `You are Grandmaster Gloop, a friendly chess tutor for a 7-year-old.
 Be encouraging, concise, and explain things simply.
