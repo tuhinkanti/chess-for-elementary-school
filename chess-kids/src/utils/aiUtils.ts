@@ -55,5 +55,38 @@ export function validateTutorRequest(body: unknown): { valid: boolean; error?: s
         return { valid: false, error: 'Messages cannot be empty' };
     }
 
+    if (b.messages.length > 50) {
+        return { valid: false, error: 'Too many messages (max 50)' };
+    }
+
+    const messages = b.messages as Array<unknown>;
+    for (const msg of messages) {
+        if (!msg || typeof msg !== 'object') {
+            return { valid: false, error: 'Invalid message format' };
+        }
+
+        const m = msg as Record<string, unknown>;
+        if (!('role' in m) || !['user', 'assistant', 'system'].includes(m.role as string)) {
+            return { valid: false, error: 'Invalid message role' };
+        }
+
+        if (!('content' in m) || typeof m.content !== 'string') {
+            return { valid: false, error: 'Invalid message content' };
+        }
+
+        if (m.content.length > 1000) {
+            return { valid: false, error: 'Message content too long (max 1000 chars)' };
+        }
+    }
+
+    if ('systemPrompt' in b) {
+        if (typeof b.systemPrompt !== 'string') {
+            return { valid: false, error: 'System prompt must be a string' };
+        }
+        if (b.systemPrompt.length > 2000) {
+            return { valid: false, error: 'System prompt too long (max 2000 chars)' };
+        }
+    }
+
     return { valid: true };
 }

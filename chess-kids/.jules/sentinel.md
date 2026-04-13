@@ -1,0 +1,4 @@
+## 2025-04-13 - [DoS risk by adding input length validation]
+**Vulnerability:** The AI tutor endpoint lacked length validation on the user's input, exposing the API to Denial of Service (DoS) attacks and excessive API token consumption. The messages array and string content could be arbitrarily long.
+**Learning:** Due to Node's ESM resolution constraints and TypeScript compilation setup in the local development environment, shared validation logic (`validateTutorRequest`) could not be easily imported from `src/utils/aiUtils.ts` into `server.js` without a build step or additional transpilation.
+**Prevention:** Validation logic must be duplicated or a shared compilation pipeline created to ensure that security checks are enforced consistently across both the local server (`server.js`) and production environments (`api/tutor.ts`). Always validate list lengths and maximum string sizes before passing data to external APIs.
