@@ -39,8 +39,29 @@ app.post('/api/tutor', async (req, res) => {
     try {
         const { messages, systemPrompt } = req.body;
 
-        if (!messages || messages.length === 0) {
-            return res.status(400).json({ error: 'Messages are required' });
+        if (!messages || !Array.isArray(messages) || messages.length === 0) {
+            return res.status(400).json({ error: 'Messages must be a non-empty array' });
+        }
+
+        if (messages.length > 50) {
+            return res.status(400).json({ error: 'Too many messages (maximum 50)' });
+        }
+
+        if (systemPrompt && (typeof systemPrompt !== 'string' || systemPrompt.length > 2000)) {
+            return res.status(400).json({ error: 'Invalid system prompt' });
+        }
+
+        for (let i = 0; i < messages.length; i++) {
+            const msg = messages[i];
+            if (!msg || typeof msg !== 'object') {
+                return res.status(400).json({ error: `Invalid message at index ${i}` });
+            }
+            if (typeof msg.role !== 'string' || !['user', 'assistant', 'system'].includes(msg.role)) {
+                return res.status(400).json({ error: `Invalid role at message index ${i}` });
+            }
+            if (typeof msg.content !== 'string' || msg.content.length > 1000) {
+                return res.status(400).json({ error: `Invalid content or length at message index ${i}` });
+            }
         }
 
         const systemMessage = systemPrompt || `You are Grandmaster Gloop, a friendly chess tutor for a 7-year-old.

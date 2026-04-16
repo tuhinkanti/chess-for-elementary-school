@@ -39,8 +39,6 @@ export function validateTutorRequest(body: unknown): { valid: boolean; error?: s
         return { valid: false, error: 'Invalid request body' };
     }
 
-    // Check if messages exists and is an array
-    // We cast to any for check, or use type guard
     const b = body as Record<string, unknown>;
 
     if (!('messages' in b)) {
@@ -53,6 +51,40 @@ export function validateTutorRequest(body: unknown): { valid: boolean; error?: s
 
     if (b.messages.length === 0) {
         return { valid: false, error: 'Messages cannot be empty' };
+    }
+
+    if (b.messages.length > 50) {
+        return { valid: false, error: 'Too many messages (maximum 50)' };
+    }
+
+    if ('systemPrompt' in b && b.systemPrompt !== undefined) {
+        if (typeof b.systemPrompt !== 'string') {
+            return { valid: false, error: 'systemPrompt must be a string' };
+        }
+        if (b.systemPrompt.length > 2000) {
+            return { valid: false, error: 'systemPrompt exceeds maximum length (2000)' };
+        }
+    }
+
+    for (let i = 0; i < b.messages.length; i++) {
+        const msg = b.messages[i];
+        if (!msg || typeof msg !== 'object') {
+            return { valid: false, error: `Invalid message at index ${i}` };
+        }
+
+        const m = msg as Record<string, unknown>;
+
+        if (!('role' in m) || typeof m.role !== 'string' || !['user', 'assistant', 'system'].includes(m.role)) {
+            return { valid: false, error: `Invalid role at message index ${i}` };
+        }
+
+        if (!('content' in m) || typeof m.content !== 'string') {
+            return { valid: false, error: `Invalid content at message index ${i}` };
+        }
+
+        if (m.content.length > 1000) {
+            return { valid: false, error: `Message content exceeds maximum length (1000) at index ${i}` };
+        }
     }
 
     return { valid: true };
