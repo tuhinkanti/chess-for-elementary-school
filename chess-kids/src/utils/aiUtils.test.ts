@@ -59,4 +59,46 @@ describe('validateTutorRequest', () => {
   it('fails if messages array is empty', () => {
     expect(validateTutorRequest({ messages: [] })).toEqual({ valid: false, error: 'Messages cannot be empty' });
   });
+
+  it('fails if messages array has more than 50 items', () => {
+    const body = {
+      messages: Array.from({ length: 51 }, () => ({ role: 'user', content: 'test' }))
+    };
+    expect(validateTutorRequest(body)).toEqual({ valid: false, error: 'Too many messages (maximum 50)' });
+  });
+
+  it('fails if systemPrompt is not a string', () => {
+    const body = { messages: [{ role: 'user', content: 'hi' }], systemPrompt: 123 };
+    expect(validateTutorRequest(body)).toEqual({ valid: false, error: 'systemPrompt must be a string' });
+  });
+
+  it('fails if systemPrompt is longer than 2000 characters', () => {
+    const body = {
+      messages: [{ role: 'user', content: 'hi' }],
+      systemPrompt: 'a'.repeat(2001)
+    };
+    expect(validateTutorRequest(body)).toEqual({ valid: false, error: 'systemPrompt exceeds maximum length (2000)' });
+  });
+
+  it('fails if a message is missing role', () => {
+    const body = { messages: [{ content: 'hi' }] };
+    expect(validateTutorRequest(body)).toEqual({ valid: false, error: 'Invalid role at message index 0' });
+  });
+
+  it('fails if a message has an invalid role', () => {
+    const body = { messages: [{ role: 'invalid_role', content: 'hi' }] };
+    expect(validateTutorRequest(body)).toEqual({ valid: false, error: 'Invalid role at message index 0' });
+  });
+
+  it('fails if a message is missing content', () => {
+    const body = { messages: [{ role: 'user' }] };
+    expect(validateTutorRequest(body)).toEqual({ valid: false, error: 'Invalid content at message index 0' });
+  });
+
+  it('fails if message content is longer than 1000 characters', () => {
+    const body = {
+      messages: [{ role: 'user', content: 'a'.repeat(1001) }]
+    };
+    expect(validateTutorRequest(body)).toEqual({ valid: false, error: 'Message content exceeds maximum length (1000) at index 0' });
+  });
 });
