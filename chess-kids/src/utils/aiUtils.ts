@@ -43,6 +43,15 @@ export function validateTutorRequest(body: unknown): { valid: boolean; error?: s
     // We cast to any for check, or use type guard
     const b = body as Record<string, unknown>;
 
+    if (b.systemPrompt !== undefined) {
+        if (typeof b.systemPrompt !== 'string') {
+            return { valid: false, error: 'System prompt must be a string' };
+        }
+        if (b.systemPrompt.length > 2000) {
+            return { valid: false, error: 'System prompt exceeds maximum length of 2000 characters' };
+        }
+    }
+
     if (!('messages' in b)) {
         return { valid: false, error: 'Messages are required' };
     }
@@ -53,6 +62,30 @@ export function validateTutorRequest(body: unknown): { valid: boolean; error?: s
 
     if (b.messages.length === 0) {
         return { valid: false, error: 'Messages cannot be empty' };
+    }
+
+    if (b.messages.length > 50) {
+        return { valid: false, error: 'Too many messages (maximum 50)' };
+    }
+
+    for (let i = 0; i < b.messages.length; i++) {
+        const msg = b.messages[i] as Record<string, unknown>;
+        if (!msg || typeof msg !== 'object') {
+            return { valid: false, error: `Message at index ${i} is invalid` };
+        }
+
+        const validRoles = ['user', 'assistant', 'system'];
+        if (typeof msg.role !== 'string' || !validRoles.includes(msg.role)) {
+            return { valid: false, error: `Message at index ${i} has an invalid role` };
+        }
+
+        if (typeof msg.content !== 'string') {
+            return { valid: false, error: `Message at index ${i} has invalid content` };
+        }
+
+        if (msg.content.length > 1000) {
+            return { valid: false, error: `Message at index ${i} exceeds maximum length of 1000 characters` };
+        }
     }
 
     return { valid: true };
