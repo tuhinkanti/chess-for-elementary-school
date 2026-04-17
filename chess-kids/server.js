@@ -35,13 +35,67 @@ function getModel() {
     }
 }
 
+function validateTutorRequest(body) {
+    if (!body || typeof body !== 'object') {
+        return { valid: false, error: 'Invalid request body' };
+    }
+
+    if (body.systemPrompt !== undefined) {
+        if (typeof body.systemPrompt !== 'string') {
+            return { valid: false, error: 'System prompt must be a string' };
+        }
+        if (body.systemPrompt.length > 2000) {
+            return { valid: false, error: 'System prompt exceeds maximum length of 2000 characters' };
+        }
+    }
+
+    if (!('messages' in body)) {
+        return { valid: false, error: 'Messages are required' };
+    }
+
+    if (!Array.isArray(body.messages)) {
+         return { valid: false, error: 'Messages must be an array' };
+    }
+
+    if (body.messages.length === 0) {
+        return { valid: false, error: 'Messages cannot be empty' };
+    }
+
+    if (body.messages.length > 50) {
+        return { valid: false, error: 'Too many messages (maximum 50)' };
+    }
+
+    for (let i = 0; i < body.messages.length; i++) {
+        const msg = body.messages[i];
+        if (!msg || typeof msg !== 'object') {
+            return { valid: false, error: `Message at index ${i} is invalid` };
+        }
+
+        const validRoles = ['user', 'assistant', 'system'];
+        if (typeof msg.role !== 'string' || !validRoles.includes(msg.role)) {
+            return { valid: false, error: `Message at index ${i} has an invalid role` };
+        }
+
+        if (typeof msg.content !== 'string') {
+            return { valid: false, error: `Message at index ${i} has invalid content` };
+        }
+
+        if (msg.content.length > 1000) {
+            return { valid: false, error: `Message at index ${i} exceeds maximum length of 1000 characters` };
+        }
+    }
+
+    return { valid: true };
+}
+
 app.post('/api/tutor', async (req, res) => {
     try {
-        const { messages, systemPrompt } = req.body;
-
-        if (!messages || messages.length === 0) {
-            return res.status(400).json({ error: 'Messages are required' });
+        const validation = validateTutorRequest(req.body);
+        if (!validation.valid) {
+            return res.status(400).json({ error: validation.error });
         }
+
+        const { messages, systemPrompt } = req.body;
 
         const systemMessage = systemPrompt || `You are Grandmaster Gloop, a friendly chess tutor for a 7-year-old.
 Be encouraging, concise, and explain things simply.
