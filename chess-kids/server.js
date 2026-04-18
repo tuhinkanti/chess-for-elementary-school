@@ -39,8 +39,38 @@ app.post('/api/tutor', async (req, res) => {
     try {
         const { messages, systemPrompt } = req.body;
 
-        if (!messages || messages.length === 0) {
-            return res.status(400).json({ error: 'Messages are required' });
+        if (!messages || !Array.isArray(messages)) {
+            return res.status(400).json({ error: 'Messages must be an array' });
+        }
+
+        if (messages.length === 0) {
+            return res.status(400).json({ error: 'Messages cannot be empty' });
+        }
+
+        // Security: Enforce limits to prevent DoS and token exhaustion
+        if (messages.length > 50) {
+            return res.status(400).json({ error: 'Too many messages (max 50)' });
+        }
+
+        if (systemPrompt && typeof systemPrompt === 'string' && systemPrompt.length > 2000) {
+            return res.status(400).json({ error: 'System prompt too long (max 2000 characters)' });
+        }
+
+        const validRoles = ['user', 'assistant', 'system'];
+
+        for (const msg of messages) {
+            if (!msg || typeof msg !== 'object') {
+                return res.status(400).json({ error: 'Invalid message format' });
+            }
+            if (!validRoles.includes(msg.role)) {
+                return res.status(400).json({ error: `Invalid role. Must be one of: ${validRoles.join(', ')}` });
+            }
+            if (typeof msg.content !== 'string') {
+                return res.status(400).json({ error: 'Message content must be a string' });
+            }
+            if (msg.content.length > 1000) {
+                return res.status(400).json({ error: 'Message content too long (max 1000 characters)' });
+            }
         }
 
         const systemMessage = systemPrompt || `You are Grandmaster Gloop, a friendly chess tutor for a 7-year-old.

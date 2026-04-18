@@ -55,5 +55,33 @@ export function validateTutorRequest(body: unknown): { valid: boolean; error?: s
         return { valid: false, error: 'Messages cannot be empty' };
     }
 
+    // Security: Enforce limits to prevent DoS and token exhaustion
+    if (b.messages.length > 50) {
+        return { valid: false, error: 'Too many messages (max 50)' };
+    }
+
+    if (b.systemPrompt && typeof b.systemPrompt === 'string' && b.systemPrompt.length > 2000) {
+        return { valid: false, error: 'System prompt too long (max 2000 characters)' };
+    }
+
+    const validRoles = ['user', 'assistant', 'system'];
+
+    // Use an explicit type cast correctly without triggering eslint any errors
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    for (const msg of b.messages as any[]) {
+        if (!msg || typeof msg !== 'object') {
+            return { valid: false, error: 'Invalid message format' };
+        }
+        if (!validRoles.includes(msg.role)) {
+            return { valid: false, error: `Invalid role. Must be one of: ${validRoles.join(', ')}` };
+        }
+        if (typeof msg.content !== 'string') {
+            return { valid: false, error: 'Message content must be a string' };
+        }
+        if (msg.content.length > 1000) {
+            return { valid: false, error: 'Message content too long (max 1000 characters)' };
+        }
+    }
+
     return { valid: true };
 }
