@@ -1,0 +1,4 @@
+## 2025-04-20 - Fix DoS risk by adding input length limits to AI tutor requests
+**Vulnerability:** The AI tutor endpoint lacked length limits for `messages` array size, message content, and `systemPrompt`, leading to potential Denial of Service (DoS) and excessive token usage. Role validation was also absent.
+**Learning:** External AI API requests must strictly limit the payload size on the server side because long strings or arrays from user inputs can quickly exhaust API limits or cause excessive CPU/memory usage when parsing and validating.
+**Prevention:** Implement and enforce robust input schema validation (including array length, string length, and enum boundaries) before passing any client-provided payload to external services.
