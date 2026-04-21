@@ -1,0 +1,4 @@
+## 2025-04-21 - Add input length bounds to AI tutor API
+**Vulnerability:** The AI tutor API endpoint (`/api/tutor`) accepted an unbounded number of messages and unbounded message lengths in the request body. This lacked protection against DoS attacks or excessive token usage exhaustion, as attackers could submit massive text payloads to the AI model.
+**Learning:** Even internal or local-provider AI endpoints need strong boundary constraints on input dimensions (array sizes, string lengths), especially since AI models charge by token and can hang on massive inputs. The validation logic was also split across TypeScript utilities and plain JS development servers, requiring duplicate checks.
+**Prevention:** Implement strict length and count limits on all input strings and arrays before passing them to external/internal services. Validated max 50 messages, max 1000 chars per message, max 2000 chars for system prompt, and enforced strict role checking.
