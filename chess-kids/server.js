@@ -39,8 +39,46 @@ app.post('/api/tutor', async (req, res) => {
     try {
         const { messages, systemPrompt } = req.body;
 
-        if (!messages || messages.length === 0) {
-            return res.status(400).json({ error: 'Messages are required' });
+        if (systemPrompt !== undefined) {
+            if (typeof systemPrompt !== 'string') {
+                return res.status(400).json({ error: 'systemPrompt must be a string' });
+            }
+            if (systemPrompt.length > 2000) {
+                return res.status(400).json({ error: 'systemPrompt exceeds maximum length of 2000 characters' });
+            }
+        }
+
+        if (!messages || !Array.isArray(messages)) {
+            return res.status(400).json({ error: 'Messages are required and must be an array' });
+        }
+
+        if (messages.length === 0) {
+            return res.status(400).json({ error: 'Messages cannot be empty' });
+        }
+
+        if (messages.length > 50) {
+            return res.status(400).json({ error: 'Too many messages (maximum 50)' });
+        }
+
+        for (let i = 0; i < messages.length; i++) {
+            const msg = messages[i];
+            if (!msg || typeof msg !== 'object') {
+                return res.status(400).json({ error: `Invalid message at index ${i}` });
+            }
+
+            const { role, content } = msg;
+
+            if (role !== 'user' && role !== 'assistant' && role !== 'system') {
+                return res.status(400).json({ error: `Invalid role at index ${i}. Must be user, assistant, or system.` });
+            }
+
+            if (typeof content !== 'string') {
+                return res.status(400).json({ error: `Message content must be a string at index ${i}` });
+            }
+
+            if (content.length > 1000) {
+                return res.status(400).json({ error: `Message content exceeds maximum length of 1000 characters at index ${i}` });
+            }
         }
 
         const systemMessage = systemPrompt || `You are Grandmaster Gloop, a friendly chess tutor for a 7-year-old.
