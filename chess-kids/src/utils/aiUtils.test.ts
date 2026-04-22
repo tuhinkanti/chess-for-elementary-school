@@ -59,4 +59,37 @@ describe('validateTutorRequest', () => {
   it('fails if messages array is empty', () => {
     expect(validateTutorRequest({ messages: [] })).toEqual({ valid: false, error: 'Messages cannot be empty' });
   });
+
+  it('fails if messages array length is greater than 50', () => {
+    const messages = Array.from({ length: 51 }, () => ({ role: 'user', content: 'hi' }));
+    expect(validateTutorRequest({ messages })).toEqual({ valid: false, error: 'Messages array exceeds maximum length of 50' });
+  });
+
+  it('fails if system prompt is not a string', () => {
+    expect(validateTutorRequest({ messages: [{ role: 'user', content: 'hi' }], systemPrompt: 123 })).toEqual({ valid: false, error: 'System prompt must be a string' });
+  });
+
+  it('fails if system prompt exceeds 2000 characters', () => {
+    const systemPrompt = 'a'.repeat(2001);
+    expect(validateTutorRequest({ messages: [{ role: 'user', content: 'hi' }], systemPrompt })).toEqual({ valid: false, error: 'System prompt exceeds maximum length of 2000 characters' });
+  });
+
+  it('fails if message is not an object', () => {
+    expect(validateTutorRequest({ messages: ['not-an-object'] })).toEqual({ valid: false, error: 'Each message must be an object' });
+  });
+
+  it('fails if message role is invalid', () => {
+    expect(validateTutorRequest({ messages: [{ role: 'invalid-role', content: 'hi' }] })).toEqual({ valid: false, error: 'Invalid message role' });
+    expect(validateTutorRequest({ messages: [{ content: 'hi' }] })).toEqual({ valid: false, error: 'Invalid message role' });
+  });
+
+  it('fails if message content is not a string', () => {
+    expect(validateTutorRequest({ messages: [{ role: 'user', content: 123 }] })).toEqual({ valid: false, error: 'Message content must be a string' });
+    expect(validateTutorRequest({ messages: [{ role: 'user' }] })).toEqual({ valid: false, error: 'Message content must be a string' });
+  });
+
+  it('fails if message content exceeds 1000 characters', () => {
+    const content = 'a'.repeat(1001);
+    expect(validateTutorRequest({ messages: [{ role: 'user', content }] })).toEqual({ valid: false, error: 'Message content exceeds maximum length of 1000 characters' });
+  });
 });
