@@ -1,0 +1,4 @@
+## 2025-04-23 - [Input Validation Limits on AI API Endpoints]
+**Vulnerability:** The `validateTutorRequest` function in `src/utils/aiUtils.ts` and the `/api/tutor` route in `server.js` lacked bounds checking on the size and number of messages, as well as the system prompt length. This exposed the AI API endpoints to resource exhaustion, token spam, and potential Denial of Service (DoS) attacks.
+**Learning:** External-facing APIs that trigger downstream AI requests must explicitly enforce strict input length and array size limits to prevent runaway costs or service disruption from excessively large payloads.
+**Prevention:** Always implement explicit bounds checking (e.g., maximum array length, maximum string length) alongside type validation for any user-supplied data that is passed to LLMs.

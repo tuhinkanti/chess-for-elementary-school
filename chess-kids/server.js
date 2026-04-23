@@ -39,8 +39,45 @@ app.post('/api/tutor', async (req, res) => {
     try {
         const { messages, systemPrompt } = req.body;
 
-        if (!messages || messages.length === 0) {
-            return res.status(400).json({ error: 'Messages are required' });
+        // SECURITY: Validate system prompt length to prevent token exhaustion / DoS
+        if (systemPrompt) {
+            if (typeof systemPrompt !== 'string') {
+                return res.status(400).json({ error: 'System prompt must be a string' });
+            }
+            if (systemPrompt.length > 2000) {
+                return res.status(400).json({ error: 'System prompt exceeds maximum length of 2000 characters' });
+            }
+        }
+
+        if (!messages || !Array.isArray(messages)) {
+            return res.status(400).json({ error: 'Messages must be an array' });
+        }
+
+        if (messages.length === 0) {
+            return res.status(400).json({ error: 'Messages cannot be empty' });
+        }
+
+        // SECURITY: Enforce maximum message count to prevent token exhaustion / DoS
+        if (messages.length > 50) {
+            return res.status(400).json({ error: 'Too many messages' });
+        }
+
+        const validRoles = ['user', 'assistant', 'system'];
+        for (const msg of messages) {
+            if (!msg || typeof msg !== 'object') {
+                return res.status(400).json({ error: 'Invalid message format' });
+            }
+            // SECURITY: Validate message role to prevent unexpected role escalation
+            if (!msg.role || typeof msg.role !== 'string' || !validRoles.includes(msg.role)) {
+                return res.status(400).json({ error: 'Invalid message role' });
+            }
+            if (typeof msg.content !== 'string') {
+                return res.status(400).json({ error: 'Invalid message content' });
+            }
+            // SECURITY: Validate message content length to prevent token exhaustion / DoS
+            if (msg.content.length > 1000) {
+                return res.status(400).json({ error: 'Message content exceeds maximum length of 1000 characters' });
+            }
         }
 
         const systemMessage = systemPrompt || `You are Grandmaster Gloop, a friendly chess tutor for a 7-year-old.
