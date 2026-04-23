@@ -43,6 +43,16 @@ export function validateTutorRequest(body: unknown): { valid: boolean; error?: s
     // We cast to any for check, or use type guard
     const b = body as Record<string, unknown>;
 
+    // SECURITY: Validate system prompt length to prevent token exhaustion / DoS
+    if ('systemPrompt' in b) {
+        if (typeof b.systemPrompt !== 'string') {
+            return { valid: false, error: 'System prompt must be a string' };
+        }
+        if (b.systemPrompt.length > 2000) {
+            return { valid: false, error: 'System prompt exceeds maximum length of 2000 characters' };
+        }
+    }
+
     if (!('messages' in b)) {
         return { valid: false, error: 'Messages are required' };
     }
@@ -53,6 +63,34 @@ export function validateTutorRequest(body: unknown): { valid: boolean; error?: s
 
     if (b.messages.length === 0) {
         return { valid: false, error: 'Messages cannot be empty' };
+    }
+
+    // SECURITY: Enforce maximum message count to prevent token exhaustion / DoS
+    if (b.messages.length > 50) {
+        return { valid: false, error: 'Too many messages' };
+    }
+
+    const validRoles = ['user', 'assistant', 'system'];
+    for (const msg of b.messages) {
+        if (!msg || typeof msg !== 'object') {
+            return { valid: false, error: 'Invalid message format' };
+        }
+
+        const m = msg as Record<string, unknown>;
+
+        // SECURITY: Validate message role to prevent unexpected role escalation
+        if (!('role' in m) || typeof m.role !== 'string' || !validRoles.includes(m.role)) {
+            return { valid: false, error: 'Invalid message role' };
+        }
+
+        if (!('content' in m) || typeof m.content !== 'string') {
+            return { valid: false, error: 'Invalid message content' };
+        }
+
+        // SECURITY: Validate message content length to prevent token exhaustion / DoS
+        if (m.content.length > 1000) {
+            return { valid: false, error: 'Message content exceeds maximum length of 1000 characters' };
+        }
     }
 
     return { valid: true };
