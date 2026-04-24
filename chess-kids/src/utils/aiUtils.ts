@@ -55,5 +55,28 @@ export function validateTutorRequest(body: unknown): { valid: boolean; error?: s
         return { valid: false, error: 'Messages cannot be empty' };
     }
 
+    if (b.messages.length > 50) {
+        return { valid: false, error: 'Too many messages' };
+    }
+
+    const messages = b.messages as Array<Record<string, unknown>>;
+    for (const msg of messages) {
+        if (!msg || typeof msg !== 'object') {
+            return { valid: false, error: 'Invalid message format' };
+        }
+        if (typeof msg.role !== 'string' || !['user', 'assistant', 'system'].includes(msg.role)) {
+            return { valid: false, error: 'Invalid role' };
+        }
+        if (typeof msg.content !== 'string' || msg.content.length > 1000) {
+            return { valid: false, error: 'Message content exceeds maximum length' };
+        }
+    }
+
+    if ('systemPrompt' in b) {
+        if (typeof b.systemPrompt !== 'string' || b.systemPrompt.length > 2000) {
+            return { valid: false, error: 'System prompt exceeds maximum length' };
+        }
+    }
+
     return { valid: true };
 }
