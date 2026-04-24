@@ -59,4 +59,23 @@ describe('validateTutorRequest', () => {
   it('fails if messages array is empty', () => {
     expect(validateTutorRequest({ messages: [] })).toEqual({ valid: false, error: 'Messages cannot be empty' });
   });
+
+  it('fails if there are too many messages', () => {
+    const messages = Array(51).fill({ role: 'user', content: 'hi' });
+    expect(validateTutorRequest({ messages })).toEqual({ valid: false, error: 'Too many messages' });
+  });
+
+  it('fails if message role is invalid', () => {
+    expect(validateTutorRequest({ messages: [{ role: 'invalid', content: 'hi' }] })).toEqual({ valid: false, error: 'Invalid role' });
+  });
+
+  it('fails if message content exceeds maximum length', () => {
+    const longContent = 'a'.repeat(1001);
+    expect(validateTutorRequest({ messages: [{ role: 'user', content: longContent }] })).toEqual({ valid: false, error: 'Message content exceeds maximum length' });
+  });
+
+  it('fails if system prompt exceeds maximum length', () => {
+    const longPrompt = 'a'.repeat(2001);
+    expect(validateTutorRequest({ messages: [{ role: 'user', content: 'hi' }], systemPrompt: longPrompt })).toEqual({ valid: false, error: 'System prompt exceeds maximum length' });
+  });
 });
