@@ -1,0 +1,4 @@
+## 2024-05-18 - Missing input length limits on API endpoints (DoS Risk)
+**Vulnerability:** The `/api/tutor` endpoint and its validation utility (`validateTutorRequest`) lacked bounding checks on request array sizes and message lengths. This allowed an attacker to send an arbitrarily large number of messages or gigantic string contents, potentially causing high CPU/memory usage, exhaustion of tokens via backend AI processing tools, and ultimately denial of service.
+**Learning:** Due to Node.js backend configuration relying directly on user input passing into compute-heavy external API endpoints (like `generateText`), boundary checks must exist explicitly before API proxying to avoid out-of-memory or external billing exhaustion conditions.
+**Prevention:** Implement strict length and array-size boundaries, alongside robust role whitelisting for all incoming nested data structures before allocating internal processing time.

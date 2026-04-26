@@ -49,14 +49,35 @@ describe('validateTutorRequest', () => {
   });
 
   it('fails if messages is missing', () => {
-    expect(validateTutorRequest({})).toEqual({ valid: false, error: 'Messages are required' });
+    expect(validateTutorRequest({})).toEqual({ valid: false, error: 'Messages are required and must be an array' });
   });
 
   it('fails if messages is not an array', () => {
-    expect(validateTutorRequest({ messages: 'not-array' })).toEqual({ valid: false, error: 'Messages must be an array' });
+    expect(validateTutorRequest({ messages: 'not-array' })).toEqual({ valid: false, error: 'Messages are required and must be an array' });
   });
 
   it('fails if messages array is empty', () => {
     expect(validateTutorRequest({ messages: [] })).toEqual({ valid: false, error: 'Messages cannot be empty' });
+  });
+
+  it('fails if there are too many messages', () => {
+    const messages = Array(51).fill({ role: 'user', content: 'hi' });
+    expect(validateTutorRequest({ messages })).toEqual({ valid: false, error: 'Too many messages (max 50)' });
+  });
+
+  it('fails if message content is too long', () => {
+    const messages = [{ role: 'user', content: 'a'.repeat(1001) }];
+    expect(validateTutorRequest({ messages })).toEqual({ valid: false, error: 'Message content must be a string under 1000 characters' });
+  });
+
+  it('fails if message role is invalid', () => {
+    const messages = [{ role: 'hacker', content: 'hi' }];
+    expect(validateTutorRequest({ messages })).toEqual({ valid: false, error: 'Invalid or missing role in message' });
+  });
+
+  it('fails if systemPrompt is too long', () => {
+    const messages = [{ role: 'user', content: 'hi' }];
+    const systemPrompt = 'a'.repeat(2001);
+    expect(validateTutorRequest({ messages, systemPrompt })).toEqual({ valid: false, error: 'systemPrompt must be a string under 2000 characters' });
   });
 });

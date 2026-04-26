@@ -43,16 +43,37 @@ export function validateTutorRequest(body: unknown): { valid: boolean; error?: s
     // We cast to any for check, or use type guard
     const b = body as Record<string, unknown>;
 
-    if (!('messages' in b)) {
-        return { valid: false, error: 'Messages are required' };
-    }
-
-    if (!Array.isArray(b.messages)) {
-         return { valid: false, error: 'Messages must be an array' };
+    if (!('messages' in b) || !Array.isArray(b.messages)) {
+        return { valid: false, error: 'Messages are required and must be an array' };
     }
 
     if (b.messages.length === 0) {
         return { valid: false, error: 'Messages cannot be empty' };
+    }
+
+    if (b.messages.length > 50) {
+        return { valid: false, error: 'Too many messages (max 50)' };
+    }
+
+    for (const msg of b.messages) {
+        if (!msg || typeof msg !== 'object') {
+            return { valid: false, error: 'Invalid message format' };
+        }
+
+        const m = msg as Record<string, unknown>;
+        if (typeof m.role !== 'string' || !['user', 'assistant', 'system'].includes(m.role)) {
+            return { valid: false, error: 'Invalid or missing role in message' };
+        }
+
+        if (typeof m.content !== 'string' || m.content.length > 1000) {
+            return { valid: false, error: 'Message content must be a string under 1000 characters' };
+        }
+    }
+
+    if ('systemPrompt' in b) {
+        if (typeof b.systemPrompt !== 'string' || b.systemPrompt.length > 2000) {
+            return { valid: false, error: 'systemPrompt must be a string under 2000 characters' };
+        }
     }
 
     return { valid: true };
