@@ -43,6 +43,32 @@ app.post('/api/tutor', async (req, res) => {
             return res.status(400).json({ error: 'Messages are required' });
         }
 
+        // Security: Limit array size to prevent DoS via excessive tokens
+        if (messages.length > 50) {
+            return res.status(400).json({ error: 'Too many messages' });
+        }
+
+        // Security: Validate individual messages
+        for (const msg of messages) {
+            if (!msg || typeof msg !== 'object') {
+                return res.status(400).json({ error: 'Invalid message format' });
+            }
+            if (!['user', 'assistant', 'system'].includes(msg.role)) {
+                return res.status(400).json({ error: 'Invalid message role' });
+            }
+            if (typeof msg.content !== 'string') {
+                return res.status(400).json({ error: 'Message content must be a string' });
+            }
+            if (msg.content.length > 1000) {
+                return res.status(400).json({ error: 'Message content exceeds maximum length' });
+            }
+        }
+
+        // Security: Limit system prompt length if provided
+        if (systemPrompt && typeof systemPrompt === 'string' && systemPrompt.length > 2000) {
+            return res.status(400).json({ error: 'System prompt exceeds maximum length' });
+        }
+
         const systemMessage = systemPrompt || `You are Grandmaster Gloop, a friendly chess tutor for a 7-year-old.
 Be encouraging, concise, and explain things simply.
 Always respond with valid JSON: {"message": "your response", "mood": "encouraging"|"thinking"|"surprised"|"celebrating"}`;
