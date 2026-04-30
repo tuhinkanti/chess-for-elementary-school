@@ -39,8 +39,34 @@ app.post('/api/tutor', async (req, res) => {
     try {
         const { messages, systemPrompt } = req.body;
 
-        if (!messages || messages.length === 0) {
+        if (!messages || !Array.isArray(messages) || messages.length === 0) {
             return res.status(400).json({ error: 'Messages are required' });
+        }
+        if (messages.length > 50) {
+            return res.status(400).json({ error: 'Too many messages' });
+        }
+        for (const msg of messages) {
+            if (typeof msg !== 'object' || msg === null) {
+                return res.status(400).json({ error: 'Invalid message format' });
+            }
+            if (msg.role !== 'user' && msg.role !== 'assistant' && msg.role !== 'system') {
+                return res.status(400).json({ error: 'Invalid message role' });
+            }
+            if (typeof msg.content !== 'string') {
+                return res.status(400).json({ error: 'Message content must be a string' });
+            }
+            if (msg.content.length > 1000) {
+                return res.status(400).json({ error: 'Message content too long (max 1000 chars)' });
+            }
+        }
+
+        if (systemPrompt !== undefined) {
+            if (typeof systemPrompt !== 'string') {
+                return res.status(400).json({ error: 'System prompt must be a string' });
+            }
+            if (systemPrompt.length > 2000) {
+                return res.status(400).json({ error: 'System prompt too long (max 2000 chars)' });
+            }
         }
 
         const systemMessage = systemPrompt || `You are Grandmaster Gloop, a friendly chess tutor for a 7-year-old.

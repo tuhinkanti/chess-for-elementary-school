@@ -1,0 +1,4 @@
+## 2024-05-01 - Missing Input Length Limits (DoS Risk)
+**Vulnerability:** The AI tutor endpoints (`api/tutor.ts` and `server.js`) accepted an unbounded array of messages and unbounded message contents/system prompts. This allows a malicious user to send massive payloads, potentially causing resource exhaustion, excessive memory consumption, or generating astronomical AI API billing costs (Denial of Wallet).
+**Learning:** External API dependencies are vulnerable to resource exhaustion if user input size is not strictly constrained at the validation layer before being processed or forwarded. Both the number of items and the size of individual items must be capped.
+**Prevention:** Always enforce strict upper bounds on all arrays and strings submitted to external services, particularly LLMs. Implement explicit limits (e.g., max 50 messages, max 1000 characters per message) and strict role validation ('user', 'assistant', 'system') during initial input parsing.
