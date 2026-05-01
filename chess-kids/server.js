@@ -39,8 +39,42 @@ app.post('/api/tutor', async (req, res) => {
     try {
         const { messages, systemPrompt } = req.body;
 
-        if (!messages || messages.length === 0) {
-            return res.status(400).json({ error: 'Messages are required' });
+        if (!messages || !Array.isArray(messages)) {
+            return res.status(400).json({ error: 'Messages are required and must be an array' });
+        }
+
+        if (messages.length === 0) {
+            return res.status(400).json({ error: 'Messages cannot be empty' });
+        }
+
+        if (messages.length > 50) {
+            return res.status(400).json({ error: 'Too many messages (max 50)' });
+        }
+
+        const validRoles = ['user', 'assistant', 'system'];
+
+        for (const msg of messages) {
+            if (!msg || typeof msg !== 'object') {
+                return res.status(400).json({ error: 'Invalid message format' });
+            }
+            if (typeof msg.role !== 'string' || !validRoles.includes(msg.role)) {
+                return res.status(400).json({ error: 'Invalid role in message' });
+            }
+            if (typeof msg.content !== 'string') {
+                return res.status(400).json({ error: 'Message content must be a string' });
+            }
+            if (msg.content.length > 1000) {
+                return res.status(400).json({ error: 'Message content exceeds maximum length (1000 characters)' });
+            }
+        }
+
+        if (systemPrompt !== undefined) {
+            if (typeof systemPrompt !== 'string') {
+                return res.status(400).json({ error: 'System prompt must be a string' });
+            }
+            if (systemPrompt.length > 2000) {
+                return res.status(400).json({ error: 'System prompt exceeds maximum length (2000 characters)' });
+            }
         }
 
         const systemMessage = systemPrompt || `You are Grandmaster Gloop, a friendly chess tutor for a 7-year-old.
