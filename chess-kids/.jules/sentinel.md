@@ -1,0 +1,4 @@
+## 2024-05-01 - Missing AI Input Limitations
+**Vulnerability:** The AI tutor endpoints lacked input length constraints and array bounds. Malicious actors could send massive chat histories or extremely long individual messages and system prompts, causing a DoS through excessive token processing/cost and memory exhaustion on the AI provider.
+**Learning:** Even internal or "safe" endpoints communicating with third-party LLMs need strict, explicit boundaries on the size and structure of inputs (like max message counts, max length per string, valid roles) before those inputs are processed by SDKs or forwarded.
+**Prevention:** Implement strict length limits on arrays and strings, as well as role validation, in parsing/validation layers (`validateTutorRequest` and inline in development servers) for any user-controlled input bound for LLM endpoints.
