@@ -1,0 +1,4 @@
+## 2024-05-02 - [Denial of Service (DoS) via Unbounded Input]
+**Vulnerability:** The AI tutor endpoints (`api/tutor.ts` and `server.js`) accepted an array of messages without enforcing any limits on the array length or the size of strings within those messages (such as `content` or `systemPrompt`). This could allow an attacker to send an extremely large payload, leading to excessive resource consumption (DoS) and potential high AI API usage costs.
+**Learning:** Even when basic structure validation exists (e.g., checking if it's an array), lacking explicit bounding constraints on user-supplied data sent to external services poses a significant risk.
+**Prevention:** Always implement explicit maximum length validations for arrays and string lengths when processing user inputs, especially when passing data to third-party AI APIs.
