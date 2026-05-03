@@ -43,6 +43,34 @@ app.post('/api/tutor', async (req, res) => {
             return res.status(400).json({ error: 'Messages are required' });
         }
 
+        if (!Array.isArray(messages)) {
+            return res.status(400).json({ error: 'Messages must be an array' });
+        }
+
+        if (messages.length > 50) {
+            return res.status(400).json({ error: 'Too many messages. Maximum is 50.' });
+        }
+
+        if (systemPrompt && typeof systemPrompt === 'string' && systemPrompt.length > 2000) {
+            return res.status(400).json({ error: 'System prompt too long. Maximum is 2000 characters.' });
+        }
+
+        const validRoles = ['user', 'assistant', 'system'];
+        for (const msg of messages) {
+            if (!msg || typeof msg !== 'object') {
+                return res.status(400).json({ error: 'Invalid message format' });
+            }
+            if (typeof msg.role !== 'string' || !validRoles.includes(msg.role)) {
+                return res.status(400).json({ error: `Invalid role: ${String(msg.role)}. Must be one of user, assistant, system.` });
+            }
+            if (typeof msg.content !== 'string') {
+                return res.status(400).json({ error: 'Message content must be a string' });
+            }
+            if (msg.content.length > 1000) {
+                return res.status(400).json({ error: 'Message content too long. Maximum is 1000 characters per message.' });
+            }
+        }
+
         const systemMessage = systemPrompt || `You are Grandmaster Gloop, a friendly chess tutor for a 7-year-old.
 Be encouraging, concise, and explain things simply.
 Always respond with valid JSON: {"message": "your response", "mood": "encouraging"|"thinking"|"surprised"|"celebrating"}`;
